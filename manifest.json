@@ -1,0 +1,18 @@
+{
+  "name": "Rocha Select Gestão",
+  "short_name": "RochaSelect",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
+  "description": "Sistema de Gestão e Anúncios Rocha Select",
+  "icons": [
+    {
+      "src": "https://i.imgur.com/cXowUxZ.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
