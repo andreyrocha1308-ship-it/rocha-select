@@ -1062,15 +1062,20 @@ header {
                     textArea.value = (currentVal ? currentVal + "\n" : "") + data.data.link;
                     status.innerText = `✅ Foto enviada com sucesso!`;
                 } else {
-                    // Se não for OK, tentamos ler o texto (provavelmente o erro HTML que você viu)
-                    const errorText = await response.text();
-                    console.error("Erro Imgur:", errorText);
-                    
-                    if (window.location.protocol === 'file:') {
-                        throw new Error("O Imgur bloqueia envios de arquivos locais. Para funcionar, você precisa rodar o sistema em um servidor (como a extensão 'Live Server' do VS Code) ou hospedar o HTML na internet.");
-                    } else {
-                        throw new Error("O limite de envios do Imgur foi atingido ou o ID é inválido.");
+                    // Tenta ler o erro como JSON, mas se falhar, pega o texto bruto da resposta
+                    let errorDetail = "Erro desconhecido no servidor Imgur.";
+                    try {
+                        const errData = await response.json();
+                        errorDetail = errData.data.error || JSON.stringify(errData);
+                    } catch (jsonParseError) {
+                        errorDetail = await response.text(); // Pega o HTML/XML de erro
                     }
+                    
+                    if (response.status === 403 || response.status === 429) {
+                        solicitarNovoClientId();
+                        return;
+                    }
+                    throw new Error(errorDetail);
                 }
             } catch (error) {
                 console.error("Erro no upload:", error);
@@ -1080,6 +1085,14 @@ header {
             }
         }
         setTimeout(() => status.innerText = "", 4000);
+    }
+
+    function solicitarNovoClientId() {
+        const novoId = prompt("O limite de envios do Imgur foi atingido.\n\nPara continuar:\n1. Vá em imgur.com/registration\n2. Crie um 'Client ID'\n3. Cole o novo ID aqui:", "");
+        if (novoId && novoId.length > 5) {
+            localStorage.setItem('imgur_client_id', novoId.trim());
+            alert("Novo ID salvo! Tente o upload novamente.");
+        }
     }
 
     function criarTemplateCard(item, labelTempo, tagGiroHtml, classeGiro, imagemHtml, roiHtml = '', custoPatioHtml = '') {
@@ -1384,6 +1397,7 @@ compra: parseFloat(document.getElementById('v-compra').value) || 0,
             combustivel: document.getElementById('combustivel').value || '',
 prep: parseFloat(document.getElementById('oficina').value) || 0,
 historicoOficina: [...gastosTemporariosOficina], // Salva a lista detalhada
+            compra: parseFloat(document.getElementById('v-compra').value),
             venda: parseFloat(document.getElementById('v-venda').value),
             data: document.getElementById('d-entrada').value,
             docs: {
@@ -1536,9 +1550,7 @@ db.forEach(item => {
         document.getElementById('m-liquido').innerText = `R$ ${liquido.toLocaleString('pt-BR')}`;
         document.getElementById('m-liquido').style.color = liquido >= 0 ? 'var(--cor-primaria)' : 'var(--cor-perigo)';
 
-        const melhorCanal = Object.keys(lucroPorOrigem).length > 0 
-            ? Object.keys(lucroPorOrigem).reduce((a, b) => lucroPorOrigem[a] > lucroPorOrigem[b] ? a : b) 
-            : "---";
+        const melhorCanal = Object.keys(lucroPorOrigem).length > 0 ? Object.keys(lucroPorOrigem).reduce((a, b) => lucroPorOrigem[a] > lucroPorOrigem[b] ? a : b) : "---";
         document.getElementById('m-canal').innerText = melhorCanal;
 
         // Cálculo da Taxa de Conversão de Leads
@@ -2107,6 +2119,10 @@ ${dadosExtras}✅ Revisado e com Procedência de Qualidade
                 backgroundColor: '#020617',
                 scale: 2
             }).then(canvas => {
+                const previewImg = document.getElementById('img-preview-card');
+                previewImg.src = canvas.toDataURL("image/png");
+                document.getElementById('modal-card').style.display = 'flex';
+
                 // 2. Exibir a imagem e a legenda no novo modal
                 document.getElementById('insta-post-image-preview').src = canvas.toDataURL("image/png");
                 document.getElementById('modal-instagram-post').style.display = 'flex';
