@@ -1,0 +1,2413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocha Select - Gestão & Anúncios</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- ESTILOS DO RECIBO DE VENDA --- */
+#area-recibo {
+    display: none; /* Fica oculto no painel do sistema */
+}
+
+/* --- ESTILO DO CARD DE EXPORTAÇÃO (WHATSAPP) --- */
+#card-export-container {
+    position: fixed;
+    left: -9999px; /* Fora da tela para não atrapalhar */
+    top: 0;
+    width: 400px;
+    height: 711px;
+    background: #020617; /* Slate 950 - Fundo ultra escuro */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: none;
+}
+
+.export-header {
+    padding: 40px 30px 60px;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(2, 6, 23, 0) 100%);
+    text-align: center;
+}
+
+.export-logo {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: #10b981;
+    margin-bottom: 5px;
+}
+
+.export-img-wrapper {
+    margin: -40px 25px 0;
+    height: 280px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #1e293b;
+}
+
+.export-content {
+    padding: 40px 30px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.export-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #10b981;
+    color: #064e3b;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+/* --- ESTILO DO CARD QUADRADO (INSTAGRAM FEED) --- */
+#card-export-insta-container {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 600px;
+    height: 600px;
+    background: #020617;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.insta-header {
+    height: 350px;
+    position: relative;
+    background: #1e293b;
+}
+
+.insta-price-tag {
+    position: absolute;
+    bottom: 20px;
+    right: 0;
+    background: #10b981;
+    color: #064e3b;
+    padding: 10px 25px;
+    font-size: 32px;
+    font-weight: 900;
+    border-radius: 30px 0 0 30px;
+    box-shadow: -5px 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Estilo para a imagem no preview do modal */
+#img-preview-card {
+    max-width: 100%;
+    max-height: 60vh; /* Garante que a imagem não ocupe mais que 60% da altura da tela */
+    object-fit: contain;
+    border-radius: 12px;
+    border: 1px solid var(--borda);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+}
+
+@media print {
+    /* Se a classe 'modo-recibo' estiver ativa no body, esconde o cartaz e o sistema */
+    body.modo-recibo .container, 
+    body.modo-recibo #print-section,
+    body.modo-recibo .modal {
+        display: none !important;
+    }
+    
+    body.modo-recibo #area-recibo {
+        display: block !important;
+        background: white !important;
+        color: #000 !important;
+        padding: 30px;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .recibo-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    .recibo-titulo { font-size: 22px; font-weight: bold; text-transform: uppercase; }
+    .recibo-secao { font-weight: bold; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 10px; text-transform: uppercase; font-size: 12px; }
+    .recibo-linhas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+    .recibo-texto-longo { text-align: justify; margin: 30px 0; }
+    .recibo-assinaturas { display: flex; justify-content: space-between; margin-top: 80px; }
+    .recibo-linha-assinatura { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; font-size: 12px; }
+}
+:root {
+    --bg-principal: #f8fafc;      /* Fundo claro e arejado (Slate 50) */
+    --bg-card: #ffffff;           /* Cards brancos puros para contraste */
+    --bg-input: #f1f5f9;          /* Inputs levemente cinzas */
+    --texto-p: #0f172a;           /* Texto principal em azul escuro profundo */
+    --texto-s: #64748b;           /* Texto secundário em cinza */
+    --cor-primaria: #059669;      /* Verde esmeralda (combina com a logo) */
+    --cor-alerta: #ea580c;        /* Laranja para alertas de giro */
+    --cor-perigo: #e11d48;        /* Vermelho moderno */
+    --cor-anuncio: #2563eb;       /* Azul Royal (substitui o roxo que não combinava) */
+    --borda: #e2e8f0;             /* Bordas sutis e claras */
+    --sombra: rgba(15, 23, 42, 0.08); /* Sombra muito suave */
+    --cor-whatsapp: #25d366;
+    --cor-compra: #8b5cf6;        /* Roxo para compras/avaliações */
+}
+
+body.dark-mode {
+    --bg-principal: #0f172a;      /* Slate 900 */
+    --bg-card: #1e293b;           /* Slate 800 */
+    --bg-input: #0f172a;
+    --texto-p: #f1f5f9;
+    --texto-s: #94a3b8;
+    --cor-primaria: #10b981;
+    --cor-alerta: #f59e0b;
+    --cor-perigo: #f43f5e;
+    --cor-anuncio: #3b82f6;
+    --borda: #334155;
+    --cor-compra: #a78bfa;
+    --sombra: rgba(0, 0, 0, 0.3);
+}
+
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    font-family: 'Inter', system-ui, -apple-system, sans-serif; /* Fontes de sistema modernas */
+    -webkit-font-smoothing: antialiased;
+}
+        body { background-color: var(--bg-principal); color: var(--texto-p); padding: 20px; }
+        .container { max-width: 1500px; margin: 0 auto; }
+
+header {
+    display: flex; 
+    flex-direction: row; 
+    gap: 15px;
+    justify-content: space-between; 
+    align-items: center;
+    padding-bottom: 20px; 
+    border-bottom: 1px solid var(--borda); 
+    margin-bottom: 30px;
+    position: relative;
+}
+
+/* Botão Menu Mobile (Hamburguer) */
+.menu-mobile-btn {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--borda);
+    color: var(--texto-p);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+.menu-mobile-btn:active { transform: scale(0.95); }
+
+        .tabs { 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: wrap; /* Permite que os botões quebrem linha em celulares pequenos */
+            justify-content: center; /* Centraliza as abas caso elas quebrem linha */
+        }
+.tab-btn {
+    background: transparent; 
+    border: 1px solid transparent; 
+    color: var(--texto-s);
+    padding: 8px 16px; 
+    border-radius: 20px; /* Abas em formato pill (cápsula) */
+    cursor: pointer; 
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.tab-btn:hover {
+    color: var(--texto-p);
+    background: var(--bg-input);
+}
+.tab-btn.active { 
+    background: rgba(5, 150, 105, 0.1); /* Verde translúcido para as abas */
+    color: var(--cor-primaria); 
+    border-color: rgba(5, 150, 105, 0.3); 
+}
+
+.metrics-grid {
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); /* 2 colunas por padrão no celular */
+    gap: 12px; 
+    margin-bottom: 30px;
+}
+
+/* Em computadores e tablets, distribui os cards horizontalmente */
+@media (min-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+    }
+}
+.metric-card {
+    background: var(--bg-card); 
+    padding: 20px; 
+    border-radius: 16px; /* Bordas mais arredondadas */
+    border: 1px solid var(--borda);
+    box-shadow: 0 4px 6px -1px var(--sombra);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.metric-card span { 
+    color: var(--texto-s); 
+    font-size: 12px; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+}
+.metric-card h2 { 
+    font-size: 24px; 
+    font-weight: 700; 
+    margin-top: 10px; 
+    letter-spacing: -0.02em;
+}
+
+.main-layout { 
+    display: block; 
+    width: 100%; 
+}
+@media (max-width: 767px) {
+    .menu-mobile-btn { display: flex; }
+    
+    .tabs {
+        display: none; /* Esconde por padrão no celular */
+        position: absolute;
+        top: 65px;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        background: #ffffff;
+        border: 1px solid var(--borda);
+        padding: 15px;
+        border-radius: 12px;
+        z-index: 1000;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        gap: 8px;
+    }
+    .tabs.active { display: flex; }
+    .tab-btn, .tabs .btn-primary { 
+        width: 100%; 
+        justify-content: flex-start;
+        padding: 12px;
+    }
+}
+
+.form-section { 
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.6); /* Overlay mais suave e moderno */
+    display: none; /* Inicia oculto */
+    align-items: center;
+    justify-content: center;
+    z-index: 200; /* Fica acima de tudo */
+    padding: 15px;
+}
+.form-section form {
+    background: var(--bg-card);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid var(--borda);
+    width: 100%;
+    max-width: 480px; /* Largura ideal para computador ou celular */
+    max-height: 90vh; /* Não estoura a altura da tela */
+    overflow-y: auto; /* Adiciona rolagem interna se o celular for pequeno */
+    position: relative;
+}
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--texto-s); }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px; background: var(--bg-input); border: 1px solid var(--borda);
+            border-radius: 8px; color: var(--texto-p); font-size: 14px;
+        }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.controls-bar {
+    display: flex; 
+    flex-direction: column; /* Empilha pesquisa e ordenação no celular */
+    gap: 15px; 
+    margin-bottom: 20px; 
+    background: var(--bg-card);
+    padding: 15px; 
+    border-radius: 12px; 
+    border: 1px solid var(--borda);
+}
+
+.search-input {
+    background: var(--bg-input); 
+    border: 1px solid var(--borda); 
+    padding: 10px 15px;
+    border-radius: 8px; 
+    color: var(--texto-p); 
+    width: 100%; /* Ocupa 100% no celular */
+    font-size: 14px;
+}
+.detalhes-expansive {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+.detalhes-expansive.aberto {
+    max-height: 500px; /* Espaço suficiente para mostrar tudo ao expandir */
+}
+/* Ajustes para computadores */
+@media (min-width: 768px) {
+    .controls-bar { flex-direction: row; justify-content: space-between; align-items: center; }
+    .search-input { width: 60%; }
+}
+        .sort-select {
+            background: var(--bg-input); border: 1px solid var(--borda); padding: 10px 15px;
+            border-radius: 8px; color: var(--texto-p); font-size: 14px; cursor: pointer;
+        }
+
+        .inventory-grid { 
+    display: grid; 
+    grid-template-columns: 1fr; /* 1 card por linha no celular */
+    gap: 20px; 
+}
+.card-footer {
+    display: flex; 
+    gap: 6px; 
+    margin-top: 20px; 
+    flex-wrap: wrap;
+}
+
+.card-footer .btn {
+    flex: 1 1 auto; /* Faz os botões se ajustarem dinamicamente ao espaço disponível */
+    min-width: 40px;
+    font-size: 13px;
+    padding: 8px 10px;
+}
+
+@media (min-width: 550px) {
+    .inventory-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+}
+
+.card {
+    background: var(--bg-card); 
+    border: 1px solid var(--borda); 
+    border-radius: 16px; /* Acompanha o design das métricas */
+    overflow: hidden; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    display: flex; 
+    flex-direction: column;
+    box-shadow: 0 4px 6px -1px var(--sombra);
+}
+.card:hover { 
+    transform: translateY(-4px); 
+    border-color: var(--cor-primaria);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+        .card-body { padding: 20px; flex-grow: 1; }
+        
+        .card-img { width: 100%; height: 180px; object-fit: cover; background: #334155; border-bottom: 1px solid var(--borda); }
+        .card-img-placeholder {
+            width: 100%; height: 180px; background: #f1f5f9; border-bottom: 1px solid var(--borda);
+            display: flex; align-items: center; justify-content: center; font-size: 40px; color: #cbd5e1;
+        }
+
+/* Estilos para Galeria/Carrossel */
+.card-img-container { position: relative; width: 100%; height: 180px; background: #334155; }
+.nav-foto {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.5); color: white; border: none;
+    padding: 10px; cursor: pointer; z-index: 10; transition: 0.2s;
+}
+.nav-foto:hover { background: var(--cor-primaria); }
+.nav-prev { left: 0; border-radius: 0 4px 4px 0; }
+.nav-next { right: 0; border-radius: 4px 0 0 4px; }
+.foto-counter {
+    position: absolute; bottom: 10px; right: 10px;
+    background: rgba(0,0,0,0.6); color: white; padding: 2px 8px;
+    border-radius: 10px; font-size: 10px; font-weight: bold;
+}
+
+.markup-badge {
+    font-size: 10px; font-weight: 800; padding: 3px 6px;
+    border-radius: 4px; background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.doc-tag {
+    font-size: 10px; padding: 2px 5px; border-radius: 4px;
+    background: var(--bg-input); border: 1px solid var(--borda);
+    color: var(--texto-s); margin-right: 3px;
+}
+
+.giro-novidade { border-left: none; box-shadow: inset 0 3px 0 0 var(--cor-primaria); }
+.giro-normal { border-left: none; box-shadow: inset 0 3px 0 0 var(--cor-alerta); }
+.giro-critico { border: 1px solid var(--cor-perigo) !important; box-shadow: 0 0 10px rgba(244, 63, 94, 0.15); }
+
+/* Ícones de Plataforma Minimalistas */
+.platform-badges { display: flex; gap: 6px; margin-top: 10px; }
+.platform-icon {
+    width: 28px; 
+    height: 28px; 
+    border-radius: 50%; /* Ícones redondos e discretos */
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.03); 
+    color: var(--texto-s); 
+    border: 1px solid var(--borda);
+    transition: all 0.2s ease;
+}
+.platform-icon.active { background: rgba(37, 99, 235, 0.1); color: var(--cor-anuncio); border-color: rgba(37, 99, 235, 0.2); }
+
+.status-tag { 
+    font-size: 10px; 
+    font-weight: 700; 
+    padding: 4px 10px; 
+    border-radius: 6px; 
+    letter-spacing: 0.05em;
+}
+.giro-tag { 
+    font-size: 10px; 
+    font-weight: 700; 
+    padding: 3px 8px; 
+    border-radius: 6px; 
+    margin-left: 5px; 
+    letter-spacing: 0.02em;
+}
+        
+.btn {
+    cursor: pointer; 
+    border: none; 
+    border-radius: 10px; 
+    padding: 10px 14px;
+    font-weight: 600; 
+    font-size: 13px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; 
+    transition: all 0.2s ease;
+}
+.btn-primary { background: var(--cor-primaria); color: #ffffff; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-outline { background: var(--bg-card); border: 1px solid var(--borda); color: var(--texto-p); }
+.btn-outline:hover { background: var(--bg-input); border-color: var(--texto-s); }
+.btn-anuncio { background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--cor-anuncio); }
+.btn-anuncio:hover { background: var(--cor-anuncio); color: #ffffff; }
+
+        .hidden { display: none !important; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; border: 1px solid var(--borda); max-height: 90vh; overflow-y: auto; }
+        #texto-gerado, .calc-results { background: var(--bg-input); padding: 15px; border-radius: 8px; margin: 15px 0; white-space: pre-wrap; font-size: 14px; border: 1px solid var(--borda); }
+        
+        .calc-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--borda); }
+
+        @media print {
+            body { 
+    background-color: var(--bg-principal); 
+    color: var(--texto-p); 
+    padding: 15px; /* Reduzido levemente para ganhar espaço no celular */
+}
+            .container, .main-layout, header, .metrics-grid, .controls-bar, .form-section, .card-footer, .platform-badges, .status-tag, .tabs { display: none !important; }
+            .print-view { display: block !important; width: 100%; max-width: 800px; margin: 50px auto; border: 3px solid black; padding: 40px; border-radius: 20px; font-family: 'Arial', sans-serif; }
+            .print-title { font-size: 45px; text-transform: uppercase; font-weight: 900; border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+            .print-price { font-size: 55px; color: black; font-weight: bold; text-align: center; margin: 30px 0; background: #eee; padding: 15px; border-radius: 10px; }
+            .print-details { font-size: 22px; line-height: 2.5; }
+            .print-details span { font-weight: bold; }
+        }
+        .print-view { display: none; }
+    </style>
+</head>
+<body>
+<div id="area-recibo">
+    <div class="recibo-header">
+        <div class="recibo-titulo">Recibo de Sinal e Princípio de Pagamento</div>
+        <div style="font-size: 12px; margin-top: 5px;"><b>ROCHA SELECT</b> - Gestão de Veículos & Peças</div>
+    </div>
+
+    <div id="conteudo-dinamico-recibo">
+        </div>
+
+    <div class="recibo-texto-longo">
+        Pelo presente instrumento, declaramos para os devidos fins que recebemos do comprador acima qualificado a importância estipulada neste documento como sinal e princípio de pagamento para a aquisição do veículo/bem acima descrito. O comprador declara estar ciente do estado de conservação do veículo e assume total responsabilidade civil e criminal por quaisquer infrações de trânsito ou débitos a partir da data de entrega do bem.
+    </div>
+
+    <div style="text-align: right; margin-top: 40px;" id="recibo-data-atual">
+        </div>
+
+    <div class="recibo-assinaturas">
+        <div class="recibo-linha-assinatura">
+            <b id="recibo-ass-vendedor">ROCHA SELECT</b><br>Vendedor
+        </div>
+        <div class="recibo-linha-assinatura">
+            <b id="recibo-ass-comprador">......................................................</b><br>Comprador
+        </div>
+    </div>
+</div>
+<div class="container">
+    <header>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="https://i.imgur.com/cXowUxZ.png" alt="Rocha Select Logo" style="height: 45px; object-fit: contain;">
+            <button class="btn btn-outline" style="width: 38px; height: 38px; padding: 0; border-radius: 50%;" onclick="toggleTheme()" id="theme-toggle" title="Alternar Tema">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+        </div>
+        <button class="menu-mobile-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i> Menu</button>
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-estoque" onclick="switchTab('estoque')">📦 Estoque</button>
+            <button class="tab-btn" id="tab-leads" onclick="switchTab('leads')">👤 Leads/Contatos</button>
+            <button class="tab-btn" id="tab-compras" onclick="switchTab('compras')">🛒 Avaliador/Compras</button>
+            <button class="tab-btn" id="tab-metas" onclick="switchTab('metas')">🚀 Metas do Dia</button>
+            <button type="button" class="btn btn-primary" style="padding: 10px 15px; font-size: 13px; border-radius: 8px;" onclick="abrirFormPopup()"><i class="fa-solid fa-plus"></i> Novo Produto</button>
+            <div style="border-left: 1px solid var(--borda); margin-left: 5px; padding-left: 10px; display: flex; gap: 5px;">
+                <a href="https://business.facebook.com/latest/inbox/all" target="_blank" class="btn btn-outline" style="padding: 8px; color: #1877f2;" title="Inbox Facebook/Insta"><i class="fa-brands fa-facebook-messenger"></i></a>
+                <a href="https://adsmanager.facebook.com/" target="_blank" class="btn btn-outline" style="padding: 8px; color: var(--cor-anuncio);" title="Gerenciador de Anúncios"><i class="fa-solid fa-chart-line"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <div class="metrics-grid" id="section-metrics">
+        <div class="metric-card"><span>Itens no Pátio</span><h2 id="m-estoque">0</h2></div>
+        <div class="metric-card"><span>Anúncios Ativos</span><h2 id="m-anuncios" style="color: var(--cor-anuncio);">0</h2></div>
+        <div class="metric-card"><span>Capital em Giro</span><h2 id="m-capital" style="color: var(--cor-alerta);">R$ 0</h2></div>
+        <div class="metric-card"><span>Lucro Previsto</span><h2 id="m-lucro" style="color: var(--cor-primaria);">R$ 0</h2></div>
+        <div class="metric-card"><span>Valor Girado (Vendido)</span><h2 id="m-girado" style="color: #a855f7;">R$ 0</h2></div>
+        <div class="metric-card"><span>ROI Médio</span><h2 id="m-markup" style="color: #0ea5e9;">0%</h2></div>
+        <div class="metric-card" onclick="configurarCustos()" style="cursor:pointer; border: 1px dashed var(--cor-primaria);" title="Clique para configurar despesas"><span>Lucro Líquido (Mês) <i class="fa-solid fa-gear" style="font-size:10px"></i></span><h2 id="m-liquido" style="color: var(--cor-primaria);">R$ 0</h2></div>
+        <div class="metric-card"><span>Conversão Leads</span><h2 id="m-conversao" style="color: #f43f5e;">0%</h2></div>
+        <div class="metric-card"><span>Ticket Médio (Lucro)</span><h2 id="m-ticket" style="color: #8b5cf6;">R$ 0</h2></div>
+        <div class="metric-card"><span>Melhor Canal</span><h2 id="m-canal" style="color: #25d366; font-size: 18px !important;">---</h2></div>
+    </div>
+
+    <div class="main-layout">
+        <div class="form-section">
+            
+            <form id="main-form">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h3 id="form-title" style="margin: 0;"><i class="fa-solid fa-plus-circle"></i> Entrada de Produto</h3>
+    <button type="button" style="background: transparent; border: none; color: var(--texto-s); font-size: 20px; cursor: pointer;" onclick="fecharFormPopup()"><i class="fa-solid fa-xmark"></i></button>
+</div>
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="categoria" onchange="toggleFormFields(this.value)">
+                        <option value="Veículos">🏍️ Veículos</option>
+                        <option value="Outros">📦 Outros / Peças</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Título / Modelo</label>
+                    <input type="text" id="modelo" placeholder="Ex: Titan 150 ESD" required>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px;">
+                        <label style="margin-bottom: 0;">URLs das Fotos</label>
+                        <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="document.getElementById('file-upload-imgur').click()">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Carregar Fotos
+                        </button>
+                    </div>
+                    <input type="file" id="file-upload-imgur" class="hidden" multiple accept="image/*" onchange="uploadParaImgur(this)">
+                    <textarea id="foto-url" onpaste="handlePaste(event)" placeholder="Cole links aqui ou COLE UMA IMAGEM diretamente (Ctrl+V)" rows="3" style="width: 100%; padding: 12px; background: var(--bg-input); border: 1px solid var(--borda); border-radius: 8px; color: var(--texto-p); font-size: 14px;"></textarea>
+                    <small id="upload-status" style="font-size: 10px; color: var(--cor-primaria);"></small>
+                </div>
+                
+                <div id="campos-veiculo">
+                    <div class="form-row-2">
+                        <div class="form-group"><label>Ano</label><input type="text" id="ano" placeholder="2009/2009"></div>
+                        <div class="form-group"><label>KM</label><input type="number" id="km" placeholder="Ex: 45000"></div>
+                    </div>
+                    <div class="form-row-2">
+                        <div class="form-group"><label>Cor</label><input type="text" id="cor" placeholder="Ex: Preto"></div>
+                        <div class="form-group"><label>Combustível</label>
+                            <select id="combustivel">
+                                <option value="">Selecione...</option>
+                                <option value="Gasolina">Gasolina</option>
+                                <option value="Etanol">Etanol</option>
+                                <option value="Flex">Flex</option>
+                                <option value="Diesel">Diesel</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="border: 1px dashed var(--borda); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+    <label style="color: var(--cor-alerta); font-weight: bold; margin-bottom: 8px; display: block;">🛠️ Histórico de Preparação</label>
+    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <input type="text" id="oficina-desc" placeholder="Ex: Troca de Óleo" style="flex: 2; padding: 8px; font-size: 13px;">
+        <input type="number" id="oficina-valor" placeholder="R$" style="flex: 1; padding: 8px; font-size: 13px;">
+        <button type="button" class="btn btn-outline" style="padding: 0 12px; height: 40px;" onclick="adicionarGastoOficina()"><i class="fa-solid fa-plus"></i></button>
+    </div>
+    <ul id="lista-oficina-gastos" style="list-style: none; max-height: 120px; overflow-y: auto; font-size: 12px; color: var(--texto-s);">
+        <!-- Gastos inseridos aparecerão aqui -->
+    </ul>
+    <input type="hidden" id="oficina" value="0">
+</div>
+                </div>
+
+<div class="form-group">
+    <label>Tipo de Negócio</label>
+    <select id="tipo-negocio" onchange="toggleTipoNegocio(this.value)">
+        <option value="Proprio">🚗 Estoque Próprio</option>
+        <option value="Comissao">🤝 Consignado / Comissão</option>
+    </select>
+</div>
+
+<div class="form-row-2">
+    <div class="form-group" id="container-compra">
+        <label>Preço Compra (R$)</label>
+        <input type="number" id="v-compra">
+    </div>
+    <div class="form-group" id="container-comissao" style="display: none;">
+        <label>Sua Comissão (R$)</label>
+        <input type="number" id="v-comissao" placeholder="Ex: 2000">
+    </div>
+    <div class="form-group">
+        <label>Preço Venda (R$)</label>
+        <input type="number" id="v-venda" required>
+    </div>
+</div>
+                <div class="form-group"><label>Data de Entrada</label><input type="date" id="d-entrada" required></div>
+                
+                <div style="margin: 20px 0; padding-top: 10px; border-top: 1px solid var(--borda);">
+                    <label style="font-size: 12px; color: var(--cor-anuncio); font-weight: bold;">ONDE VAI ANUNCIAR?</label>
+                    <div style="display: flex; gap: 15px; margin-top: 10px;">
+                        <label style="cursor:pointer;"><input type="checkbox" id="check-fb"> Facebook</label>
+                        <label style="cursor:pointer;"><input type="checkbox" id="check-olx"> OLX</label>
+                        <label style="cursor:pointer;"><input type="checkbox" id="check-ins"> Insta</label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px;">
+                    <label style="font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block;">📄 DOCUMENTAÇÃO / ITENS</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="doc-crv"> CRV (Recibo) OK</label>
+                        <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="doc-manual"> Manual</label>
+                        <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="doc-chave"> Chave Reserva</label>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button type="submit" id="btn-submit" class="btn btn-primary">Salvar no Inventário</button>
+                    <button type="button" id="btn-cancel-edit" class="btn btn-outline hidden" onclick="resetForm()">Cancelar</button>
+                </div>
+                
+                <div style="display:flex; justify-content: space-between; border-top: 1px solid var(--borda); padding-top: 15px;">
+                    <button type="button" style="font-size: 11px; padding: 5px 8px; color: var(--texto-s)" class="btn btn-outline" onclick="exportarBackup()"><i class="fa-solid fa-download"></i> Exportar Dados</button>
+                    <button type="button" style="font-size: 11px; padding: 5px 8px; color: var(--texto-s)" class="btn btn-outline" onclick="document.getElementById('input-backup').click()"><i class="fa-solid fa-upload"></i> Importar</button>
+                    <input type="file" id="input-backup" class="hidden" accept=".json" onchange="importarBackup(this)">
+                </div>
+            </form>
+        </div>
+
+        <div style="display: flex; flex-direction: column; width: 100%;">
+            <div id="section-controls" class="controls-bar" style="padding: 12px; gap: 10px; display: flex; flex-direction: column;">
+                <!-- Linha Superior: Pesquisa e Ordenação -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;">
+                    <input type="text" id="search-bar" class="search-input" placeholder="🔍 Pesquisar modelo..." oninput="render()" style="flex: 2; min-width: 180px; margin: 0;">
+                    <select id="sort-filter" class="sort-select" onchange="render()" style="flex: 1; min-width: 130px; margin: 0; font-size: 12px;">
+                        <option value="recente">📅 Recentes</option>
+                        <option value="preco-maior">💰 Maior Preço</option>
+                        <option value="preco-menor">💰 Menor Preço</option>
+                        <option value="tempo">⏳ Giro (Pátio)</option>
+                    </select>
+                </div>
+                <!-- Linha Inferior: Filtros Rápidos (Deslizável no Mobile) -->
+                <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                    <style>#section-controls div::-webkit-scrollbar { display: none; }</style>
+                    <button type="button" class="tab-btn active" id="f-todos" onclick="setFiltroRapido('todos')" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">📋 Todos</button>
+                    <button type="button" class="tab-btn" id="f-estoque" onclick="setFiltroRapido('estoque')" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">📦 Estoque</button>
+                    <button type="button" class="tab-btn" id="f-vendidos" onclick="setFiltroRapido('vendidos')" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">🤝 Vendidos</button>
+                    <button type="button" class="tab-btn" id="f-anunciados" onclick="setFiltroRapido('anunciados')" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">📢 Anunciados</button>
+                    <button type="button" class="tab-btn" id="f-veiculos" onclick="setFiltroRapido('veiculos')" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">🏍️ Veículos</button>
+                    <button type="button" class="tab-btn" id="f-outros" onclick="setFiltroRapido('outros')" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">📦 Outros</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-estoque">
+            <div class="inventory-grid" id="grid-estoque"></div>
+        </div>
+
+        <div id="view-leads" class="hidden">
+            <div class="controls-bar" style="justify-content: space-between; display: flex; flex-direction: row; align-items: center;">
+                <h3 style="margin:0">🎯 Funil de Interessados (Leads)</h3>
+                <button class="btn btn-primary" onclick="abrirModalLead()"><i class="fa-solid fa-user-plus"></i> Novo Contato</button>
+            </div>
+            <div id="lista-leads" class="inventory-grid"></div>
+        </div>
+
+        <div id="view-compras" class="hidden">
+            <div class="controls-bar" style="justify-content: space-between; display: flex; flex-direction: row; align-items: center;">
+                <h3 style="margin:0">🛒 Radar de Avaliações</h3>
+                <button class="btn btn-primary" style="background: var(--cor-compra)" onclick="abrirModalAvaliacao()"><i class="fa-solid fa-calculator"></i> Nova Avaliação</button>
+            </div>
+            <div id="lista-avaliacoes" class="inventory-grid"></div>
+        </div>
+
+        <div id="view-metas" class="hidden">
+            <div class="controls-bar" style="justify-content: space-between; display: flex; align-items: center;">
+                <h3 style="margin:0">🚀 Checklist de Performance Diária</h3>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary" onclick="adicionarMeta()"><i class="fa-solid fa-plus"></i> Nova Meta</button>
+                    <button class="btn btn-outline" onclick="configurarMetas()"><i class="fa-solid fa-gear"></i> Ajustar Metas</button>
+                </div>
+            </div>
+            <div id="container-metas" class="inventory-grid"></div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-card" class="modal">
+    <div class="modal-content" style="width: 92%; max-width: 400px; text-align: center; padding: 20px; max-height: 95vh; overflow-y: auto;">
+        <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-image"></i> Card para WhatsApp</h3>
+        <div id="card-preview-container" style="margin-bottom: 20px;">
+            <img id="img-preview-card" src="" alt="Preview">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" style="flex: 1;" onclick="downloadCard()"><i class="fa-solid fa-download"></i> Baixar Imagem</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-card')">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-anuncio" class="modal">
+    <div class="modal-content">
+        <h3>🚀 Texto Sugerido</h3>
+        <div id="texto-gerado"></div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="copyText()">Copiar Texto</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-anuncio')">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Novo Modal para Post de Instagram (Imagem + Legenda) -->
+<div id="modal-instagram-post" class="modal">
+    <div class="modal-content" style="width: 92%; max-width: 600px; padding: 20px; max-height: 95vh; overflow-y: auto;">
+        <h3 style="margin-bottom: 15px;"><i class="fa-brands fa-instagram"></i> Post para Instagram</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div id="insta-post-image-preview-container" style="text-align: center;">
+                <img id="insta-post-image-preview" src="" alt="Preview Imagem Instagram" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--borda);">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 13px; color: var(--texto-s);">Legenda Sugerida:</label>
+                <textarea id="insta-post-caption" rows="8" style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--borda); border-radius: 8px; color: var(--texto-p); font-size: 14px;"></textarea>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-primary" onclick="downloadInstagramImage()"><i class="fa-solid fa-download"></i> Baixar Imagem</button>
+            <button class="btn btn-outline" onclick="copyInstagramCaption()"><i class="fa-solid fa-copy"></i> Copiar Legenda</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-instagram-post')">Fechar</button>
+        </div>
+    </div>
+</div>
+<div id="modal-venda" class="modal">
+    <div class="modal-content">
+        <h3>🤝 Fechamento de Venda</h3>
+        <p style="font-size: 13px; color: var(--texto-s); margin-bottom: 15px;">Preencha os dados do comprador para registrar no histórico.</p>
+        
+        <input type="hidden" id="venda-item-id">
+        
+        <div class="form-group">
+            <label>Nome do Comprador</label>
+            <input type="text" id="comprador-nome" placeholder="Ex: João Silva" required>
+        </div>
+        
+        <div class="form-group">
+            <label>WhatsApp do Comprador</label>
+            <input type="text" id="comprador-whats" placeholder="Ex: 11999998888">
+        </div>
+        
+        <div class="form-group">
+            <label>Forma de Pagamento</label>
+            <select id="venda-pagamento">
+                <option value="Financiamento">🏦 Financiamento</option>
+                <option value="À Vista / Pix">⚡ À Vista / Pix</option>
+                <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                <option value="Pegou Troca">🚗 Pegou Veículo na Troca</option>
+            </select>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-primary" onclick="confirmarVendaAvancada()">Confirmar Venda</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-venda')">Cancelar</button>
+        </div>
+    </div>
+</div>
+<div id="modal-lead" class="modal">
+    <div class="modal-content">
+        <h3>🎯 Registrar Interessado</h3>
+        <input type="hidden" id="lead-id">
+        <div class="form-group">
+            <label>Nome do Cliente</label>
+            <input type="text" id="lead-nome" placeholder="Ex: Roberto Alcantara">
+        </div>
+        <div class="form-group">
+            <label>WhatsApp</label>
+            <input type="text" id="lead-whats" placeholder="11 99999-9999">
+        </div>
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>Origem do Lead</label>
+                <select id="lead-origem">
+                    <option value="Facebook">Facebook</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="OLX">OLX</option>
+                    <option value="Indicação">Indicação / Passagem</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Data de Retorno (Follow-up)</label>
+                <input type="date" id="lead-followup">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Veículo de Interesse</label>
+            <select id="lead-veiculo"></select>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="lead-status">
+                <option value="Novo">🆕 Novo Contato</option>
+                <option value="Negociando">💸 Em Negociação</option>
+                <option value="Agendado">📅 Visita Agendada</option>
+                <option value="Vendido">✅ Vendido (Convertido)</option>
+                <option value="Perdido">❌ Perdido</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-primary" onclick="salvarLead()">Salvar Lead</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-lead')">Cancelar</button>
+        </div>
+    </div>
+</div>
+<div id="modal-avaliacao" class="modal">
+    <div class="modal-content" style="max-width: min(90vw, 600px);">
+        <h3>🛒 Calculadora de Compra Lucrativa</h3>
+        
+        <!-- INTEGRAÇÃO FIPE -->
+        <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid var(--cor-compra);">
+            <label style="font-weight: bold; font-size: 12px; color: var(--cor-compra); display: block; margin-bottom: 10px;">🔍 CONSULTAR TABELA FIPE (OPCIONAL)</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <select id="fipe-tipo" onchange="loadFipeBrands()" style="height: 35px; font-size: 12px; padding: 5px;">
+                    <option value="motos">🏍️ Motos</option>
+                    <option value="carros">🚗 Carros</option>
+                </select>
+                <select id="fipe-marca" onchange="loadFipeModels()" style="height: 35px; font-size: 12px; padding: 5px;">
+                    <option value="">Selecione a Marca</option>
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <select id="fipe-modelo" onchange="loadFipeYears()" style="height: 35px; font-size: 12px; padding: 5px;">
+                    <option value="">Selecione o Modelo</option>
+                </select>
+                <select id="fipe-ano" onchange="getFipePrice()" style="height: 35px; font-size: 12px; padding: 5px;">
+                    <option value="">Selecione o Ano</option>
+                </select>
+            </div>
+            <div id="fipe-loading" style="display:none; font-size: 11px; color: var(--cor-compra); margin-top: 5px; text-align: center;">Buscando dados...</div>
+        </div>
+        
+        <!-- GRÁFICO DE DEPRECIAÇÃO -->
+        <div id="fipe-graph-container" style="display:none; margin-top: 15px; background: var(--bg-input); padding: 10px; border-radius: 8px; height: 200px;">
+            <canvas id="fipeGraph"></canvas>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div class="form-group">
+                <label>Modelo do Veículo</label>
+                <input type="text" id="av-modelo" placeholder="Ex: CG 160 Fan">
+            </div>
+            <div class="form-group">
+                <label>Valor de Mercado (Venda)</label>
+                <input type="number" id="av-mercado" oninput="calcularSugestaoCompra()" placeholder="R$">
+            </div>
+        </div>
+        
+        <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <label style="font-weight: bold; font-size: 12px; color: var(--cor-compra);">📋 CHECKLIST DE DESCONTOS (O que precisa fazer?)</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="500"> Pintura/Tanque (~500)</label>
+                <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="800"> Pneus Novos (~800)</label>
+                <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="400"> Revisão Mecânica (~400)</label>
+                <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="300"> Doc/Multas (~300)</label>
+            </div>
+            <input type="number" id="av-outros-gastos" oninput="calcularSugestaoCompra()" placeholder="Outros gastos extras (R$)" style="margin-top: 10px; height: 35px;">
+        </div>
+
+        <div class="form-group">
+            <label>Margem de Lucro Desejada (%)</label>
+            <input type="number" id="av-margem" value="15" oninput="calcularSugestaoCompra()">
+        </div>
+
+        <div id="resultado-avaliacao" style="background: var(--cor-compra); color: white; padding: 20px; border-radius: 12px; text-align: center; margin: 15px 0;">
+            <span style="font-size: 12px; opacity: 0.9; text-transform: uppercase;">Oferta Máxima Sugerida</span>
+            <h2 id="av-oferta-maxima" style="font-size: 32px; margin: 5px 0;">R$ 0</h2>
+            <p id="av-lucro-estimado" style="font-size: 12px; opacity: 0.9;">Lucro previsto: R$ 0</p>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="salvarAvaliacao()" style="flex: 1; background: var(--cor-compra)">Salvar Avaliação</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-avaliacao')">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-financeiro" class="modal">
+    <div class="modal-content">
+        <h3>💸 Simulador de Parcelas Rápido</h3>
+        <div class="form-group" style="margin-top:15px;">
+            <label>Valor de Entrada (R$)</label>
+            <input type="number" id="sim-entrada" value="0" oninput="calcularFinanciamento()">
+        </div>
+        <div id="dados-financiamento" class="calc-results"></div>
+        <button class="btn btn-outline" onclick="closeModal('modal-financeiro')" style="width:100%;">Fechar Painel</button>
+    </div>
+</div>
+
+<div id="print-section" class="print-view"></div>
+
+<!-- Elemento Invisível para Renderização do Card -->
+<div id="card-export-container">
+    <div class="export-header">
+        <div class="export-logo">ROCHA SELECT</div>
+        <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;">Gestão de Veículos</div>
+    </div>
+    <div id="card-export-img" class="export-img-wrapper"></div>
+    <div class="export-content">
+        <div class="export-badge" id="card-export-cat">Veículo</div>
+        <h1 id="card-export-titulo" style="font-size: 36px; font-weight: 800; line-height: 1.1; margin-bottom: 15px; color: white;"></h1>
+        <div id="card-export-detalhes" style="color: #94a3b8; font-size: 18px; line-height: 1.8; margin-bottom: auto;"></div>
+        
+        <div style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 25px;">
+            <div style="font-size: 14px; color: #10b981; font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">Valor Promocional</div>
+            <div id="card-export-preco" style="font-size: 52px; font-weight: 900; color: white; letter-spacing: -2px;"></div>
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px; color: #64748b; font-size: 13px;">
+            <i class="fa-brands fa-whatsapp" style="color: #25d366; font-size: 18px;"></i>
+            <span>Consulte condições de financiamento</span>
+        </div>
+    </div>
+</div>
+
+<!-- Elemento Invisível para Card do Instagram (Feed) -->
+<div id="card-export-insta-container">
+    <div class="insta-header">
+        <div id="insta-export-img" style="width: 100%; height: 100%;"></div>
+        <div class="insta-price-tag" id="insta-export-preco"></div>
+    </div>
+    <div style="padding: 30px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #020617 0%, #0f172a 100%);">
+        <div class="export-badge" id="insta-export-cat"></div>
+        <h1 id="insta-export-titulo" style="font-size: 38px; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px;"></h1>
+        <div id="insta-export-detalhes" style="color: #94a3b8; font-size: 20px; display: flex; gap: 20px;"></div>
+        
+        <div style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+            <div style="font-weight: 900; letter-spacing: 2px; color: #10b981; font-size: 14px;">ROCHA SELECT</div>
+            <div style="font-size: 14px; color: #64748b;"><i class="fa-brands fa-whatsapp"></i> Consulte-nos</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+    // --- INTEGRAÇÃO IMGUR MELHORADA (PRODUTIVIDADE) ---
+    async function uploadParaImgur(input) { processarArquivosUpload(input.files); }
+
+    // Funcionalidade de COLAR imagem (Ctrl+V)
+    async function handlePaste(e) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        const files = [];
+        for (const item of items) {
+            if (item.type.indexOf("image") !== -1) files.push(item.getAsFile());
+        }
+        if (files.length > 0) {
+            e.preventDefault();
+            processarArquivosUpload(files);
+        }
+    }
+
+    async function processarArquivosUpload(files) {
+        const status = document.getElementById('upload-status');
+        const textArea = document.getElementById('foto-url');
+        if (!files || files.length === 0) return;
+
+        status.innerText = `⏳ Iniciando upload de ${files.length} item(s)...`;
+
+        for (let file of files) {
+            const formData = new FormData();
+            formData.append("image", file);
+
+            try {
+                const response = await fetch("https://api.imgur.com/3/image", {
+                    method: "POST",
+                    headers: { Authorization: "Client-ID 79904996452932b" }, // Novo Client-ID para maior estabilidade
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const currentVal = textArea.value.trim();
+                    textArea.value = (currentVal ? currentVal + "\n" : "") + data.data.link;
+                    status.innerText = `✅ Foto enviada com sucesso!`;
+                } else {
+                    // Se não for OK, tentamos ler o texto (provavelmente o erro HTML que você viu)
+                    const errorText = await response.text();
+                    console.error("Erro Imgur:", errorText);
+                    
+                    if (window.location.protocol === 'file:') {
+                        throw new Error("O Imgur bloqueia envios de arquivos locais. Para funcionar, você precisa rodar o sistema em um servidor (como a extensão 'Live Server' do VS Code) ou hospedar o HTML na internet.");
+                    } else {
+                        throw new Error("O limite de envios do Imgur foi atingido ou o ID é inválido.");
+                    }
+                }
+            } catch (error) {
+                console.error("Erro no upload:", error);
+                status.innerText = "❌ Falha no envio";
+                alert(`Erro no upload: ${error.message}\n\nVerifique sua conexão ou tente novamente mais tarde.`);
+                break; 
+            }
+        }
+        setTimeout(() => status.innerText = "", 4000);
+    }
+
+    function criarTemplateCard(item, labelTempo, tagGiroHtml, classeGiro, imagemHtml, roiHtml = '', custoPatioHtml = '') {
+        return `
+            <div class="card ${classeGiro}">
+                ${imagemHtml}
+                <div class="card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <small style="color:var(--cor-anuncio); font-weight:bold;">${item.cat}</small>
+                            <span class="giro-tag" style="background: ${item.tipoNegocio === 'Comissao' ? '#6366f1' : '#475569'}">
+                                ${item.tipoNegocio === 'Comissao' ? '🤝 Consignado' : '🚗 Próprio'}
+                            </span>
+                            ${tagGiroHtml}
+                            ${roiHtml}
+                        </div>
+                        <span class="status-tag" style="background:${item.status === 'Vendido' ? '#065f46' : '#1e293b'}">${item.status}</span>
+                    </div>
+                    <h3 style="margin: 10px 0">${item.mod} ${item.ano ? '- ' + item.ano : ''}</h3>
+                    
+                    <div style="font-size: 18px; font-weight: bold; color: var(--texto-p); margin-bottom: 10px;">
+                        R$ ${item.venda.toLocaleString('pt-BR')}
+                    </div>
+
+                    <button class="btn btn-outline" style="width: 100%; font-size: 12px; padding: 6px; margin-bottom: 12px; gap: 4px;" onclick="toggleCardDetalhes(this)">
+                        <i class="fa-solid fa-chevron-down"></i> Ver Detalhes
+                    </button>
+
+                    <div class="detalhes-expansive">
+                        <div style="font-size:14px; color:var(--texto-s); line-height: 1.8; margin-bottom:15px; padding-top: 5px; border-top: 1px dashed var(--borda);">
+                            ${item.km ? `<div style="display:flex; justify-content:space-between"><span>KM:</span> <b style="color:var(--texto-p)">${parseInt(item.km).toLocaleString('pt-BR')} KM</b></div>` : ''}
+                            ${item.cor ? `<div style="display:flex; justify-content:space-between"><span>Cor:</span> <b style="color:var(--texto-p)">${item.cor}</b></div>` : ''}
+                            <div style="display:flex; justify-content:space-between"><span>Tempo:</span> <b>${labelTempo}</b></div>
+                            ${custoPatioHtml}
+                            <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
+                                ${item.docs?.crv ? '<span class="doc-tag">📝 CRV</span>' : ''}
+                                ${item.docs?.manual ? '<span class="doc-tag">📖 Manual</span>' : ''}
+                                ${item.docs?.chave ? '<span class="doc-tag">🔑 Chave Res.</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="platform-badges">
+                        <div class="platform-icon ${item.plataformas.fb ? 'active' : ''}" title="Facebook"><i class="fa-brands fa-facebook-f"></i></div>
+                        <div class="platform-icon ${item.plataformas.olx ? 'active' : ''}" title="OLX">O</div>
+                        <div class="platform-icon ${item.plataformas.ins ? 'active' : ''}" title="Instagram"><i class="fa-brands fa-instagram"></i></div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn btn-anuncio" onclick="gerarAnuncio(${item.id})"><i class="fa-solid fa-bullhorn"></i></button>
+                        <button class="btn btn-outline" style="color:var(--cor-primaria)" onclick="abrirModalLead(${item.id})" title="Adicionar Interessado"><i class="fa-solid fa-user-tag"></i></button>
+                        <button class="btn btn-primary" onclick="gerarCardWhatsApp(${item.id})" title="Gerar Card Imagem" style="background: #25d366; color: white;"><i class="fa-brands fa-whatsapp"></i> Card</button>
+                        <button class="btn btn-primary" onclick="gerarCardInstagram(${item.id})" title="Gerar Card Instagram" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white;"><i class="fa-brands fa-instagram"></i> Feed</button>
+                        <button class="btn btn-outline" onclick="vender(${item.id})">${item.status === 'Vendido' ? 'Voltar' : 'Vendido'}</button>
+                        <button class="btn btn-outline" style="color:var(--cor-alerta)" onclick="editar(${item.id})"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-outline" style="color:var(--cor-perigo)" onclick="excluir(${item.id})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function toggleTipoNegocio(tipo) {
+    const containerCompra = document.getElementById('container-compra');
+    const containerComissao = document.getElementById('container-comissao');
+    const inputCompra = document.getElementById('v-compra');
+    const inputComissao = document.getElementById('v-comissao');
+
+    if (tipo === 'Comissao') {
+        containerCompra.style.display = 'none';
+        inputCompra.value = 0; // Não teve custo de compra para a loja
+        inputCompra.removeAttribute('required');
+        
+        containerComissao.style.display = 'block';
+        inputComissao.setAttribute('required', 'required');
+    } else {
+        containerCompra.style.display = 'block';
+        inputCompra.setAttribute('required', 'required');
+        
+        containerComissao.style.display = 'none';
+        inputComissao.value = '';
+        inputComissao.removeAttribute('required');
+    }
+}
+    function imprimirRecibo(id) {
+    const item = db.find(x => x.id === id);
+    if (!item) return;
+
+    // Se o item não tiver dados de comprador (Passo 2), avisa o usuário
+    if (item.status !== 'Vendido' || !item.comprador) {
+        alert("Para gerar o recibo, primeiro clique no botão 'Vendido' e preencha os dados do comprador (CRM).");
+        return;
+    }
+
+    const totalInvestido = item.compra + (item.prep || 0);
+    const htmlDados = `
+        <div class="recibo-secao">Dados do Comprador</div>
+        <div class="recibo-linhas">
+            <div><b>Nome/Razão Social:</b> ${item.comprador.nome}</div>
+            <div><b>WhatsApp/Contato:</b> ${item.comprador.whats}</div>
+            <div><b>Forma de Pagamento:</b> ${item.comprador.pagamento}</div>
+            <div><b>Status do Bem:</b> Registrado como Vendido</div>
+        </div>
+
+        <div class="recibo-secao">Dados do Veículo / Bem</div>
+        <div class="recibo-linhas">
+            <div><b>Modelo/Marca:</b> ${item.mod}</div>
+            <div><b>Ano:</b> ${item.ano || 'Não informado'}</div>
+            <div><b>Cor:</b> ${item.cor || 'Não informada'}</div>
+            <div><b>Quilometragem:</b> ${item.km ? parseInt(item.km).toLocaleString('pt-BR') + ' KM' : 'Não informada'}</div>
+            <div><b>Categoria:</b> ${item.cat}</div>
+        </div>
+
+        <div class="recibo-secao">Valores Comerciais</div>
+        <div class="recibo-linhas" style="grid-template-columns: 1fr;">
+            <div style="font-size: 16px;"><b>Valor Total da Venda:</b> <mark style="background: #ddd; padding: 2px 6px; font-weight: bold;">R$ ${item.venda.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</mark></div>
+        </div>
+    `;
+
+    // Atualiza o conteúdo e a assinatura com os dados reais
+    document.getElementById('conteudo-dinamico-recibo').innerHTML = htmlDados;
+    document.getElementById('recibo-ass-comprador').innerText = item.comprador.nome.toUpperCase();
+    
+    // Configura a data atual por extenso
+    const opcoesData = { year: 'numeric', month: 'long', day: 'numeric' };
+    const dataFormatada = new Date().toLocaleDateString('pt-BR', opcoesData);
+    document.getElementById('recibo-data-atual').innerHTML = `<b>Data de Emissão:</b> ${dataFormatada}`;
+
+    // Ativa a classe de controle no body, imprime e depois desativa
+    document.body.classList.add('modo-recibo');
+    window.print();
+    document.body.classList.remove('modo-recibo');
+}
+    function abrirFormPopup() {
+    document.querySelector('.tabs').classList.remove('active');
+    // Exibe o contêiner usando flex para centralizar o formulário na tela
+    document.querySelector('.form-section').style.display = 'flex';
+}
+
+function fecharFormPopup() {
+    document.querySelector('.form-section').style.display = 'none';
+    resetForm(); // Limpa os campos ao fechar para não misturar dados
+    
+}
+    function toggleCardDetalhes(botao) {
+    // Encontra o painel de detalhes logo abaixo do botão clicado
+    const painel = botao.nextElementSibling;
+    
+    // Alterna a classe que controla a altura dinâmica
+    painel.classList.toggle('aberto');
+    
+    // Atualiza o texto e a setinha do botão
+    if (painel.classList.contains('aberto')) {
+        botao.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Recolher Detalhes';
+    } else {
+        botao.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Ver Detalhes';
+    }
+}
+    function setFiltroRapido(tipo) {
+    filtroRapidoAtual = tipo;
+    
+    // Lista de IDs dos botões de filtro para gerenciar a classe 'active'
+    const botoes = ['f-todos', 'f-estoque', 'f-vendidos', 'f-anunciados', 'f-veiculos', 'f-outros'];
+    botoes.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.remove('active');
+    });
+    
+    // Adiciona classe ativa no botão clicado
+    const btnAtivo = document.getElementById('f-' + tipo);
+    if (btnAtivo) btnAtivo.classList.add('active');
+    
+    // Recarrega a listagem aplicando a nova regra
+    render();
+}
+    // Array global temporário para os gastos que estão sendo digitados no formulário
+let gastosTemporariosOficina = [];
+
+function adicionarGastoOficina() {
+    const descInput = document.getElementById('oficina-desc');
+    const valorInput = document.getElementById('oficina-valor');
+    const desc = descInput.value.trim();
+    const valor = parseFloat(valorInput.value) || 0;
+
+    if (!desc || valor <= 0) {
+        alert("Digite uma descrição válida e um valor maior que zero.");
+        return;
+    }
+
+    // Adiciona o gasto ao array temporário
+    gastosTemporariosOficina.push({ desc, valor });
+    
+    // Limpa os campos de digitação
+    descInput.value = '';
+    valorInput.value = '';
+
+    atualizarListaOficinaInterface();
+}
+
+function removerGastoOficina(index) {
+    gastosTemporariosOficina.splice(index, 1);
+    atualizarListaOficinaInterface();
+}
+
+function atualizarListaOficinaInterface() {
+    const lista = document.getElementById('lista-oficina-gastos');
+    const inputHiddenTotal = document.getElementById('oficina');
+    lista.innerHTML = '';
+    
+    let totalGasto = 0;
+
+    gastosTemporariosOficina.forEach((gasto, idx) => {
+        totalGasto += gasto.valor;
+        lista.innerHTML += `
+            <li style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--borda);">
+                <span>• ${gasto.desc}</span>
+                <span style="color: var(--texto-p)">
+                    R$ ${gasto.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    <i class="fa-solid fa-times" style="color: var(--cor-perigo); margin-left: 8px; cursor: pointer;" onclick="removerGastoOficina(${idx})"></i>
+                </span>
+            </li>
+        `;
+    });
+
+    // Atualiza o input oculto que o seu sistema já usa para calcular o lucro
+    inputHiddenTotal.value = totalGasto;
+}
+    let db = JSON.parse(localStorage.getItem('dealer_v3')) || [];
+    let leads = JSON.parse(localStorage.getItem('dealer_leads')) || [];
+    let avaliacoes = JSON.parse(localStorage.getItem('dealer_avaliacoes')) || [];
+    let metasData = JSON.parse(localStorage.getItem('dealer_metas')) || { data: "", itens: getDefaultMetas() };
+    let currentTab = 'estoque';
+    let fipeChart = null;
+    let activeSimId = null;
+    let filtroRapidoAtual = 'todos'; // Controla qual filtro de botão está ativo
+
+    function toggleMenu() {
+        document.querySelector('.tabs').classList.toggle('active');
+    }
+
+    function toggleTheme() {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('dealer_theme', isDark ? 'dark' : 'light');
+        updateThemeIcon();
+    }
+
+    function updateThemeIcon() {
+        const icon = document.querySelector('#theme-toggle i');
+        if (document.body.classList.contains('dark-mode')) {
+            icon.classList.replace('fa-moon', 'fa-sun');
+        } else {
+            icon.classList.replace('fa-sun', 'fa-moon');
+        }
+    }
+
+    // Inicializa o tema salvo ao carregar a página
+    if (localStorage.getItem('dealer_theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeIcon();
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelector('.tabs').classList.remove('active');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        if(tab === 'estoque') document.getElementById('tab-estoque').classList.add('active');
+        if(tab === 'leads') document.getElementById('tab-leads').classList.add('active');
+        if(tab === 'compras') document.getElementById('tab-compras').classList.add('active');
+        if(tab === 'metas') document.getElementById('tab-metas').classList.add('active');
+        
+        document.getElementById('view-estoque').classList.toggle('hidden', tab !== 'estoque');
+        document.getElementById('view-leads').classList.toggle('hidden', tab !== 'leads');
+        document.getElementById('view-compras').classList.toggle('hidden', tab !== 'compras');
+        document.getElementById('view-metas').classList.toggle('hidden', tab !== 'metas');
+        
+        const isInventory = (tab === 'estoque');
+        document.getElementById('section-metrics').classList.toggle('hidden', !isInventory);
+        document.getElementById('section-controls').classList.toggle('hidden', !isInventory);
+        render();
+    }
+
+    function toggleFormFields(val) {
+        document.getElementById('campos-veiculo').classList.toggle('hidden', val !== 'Veículos');
+    }
+
+    document.getElementById('d-entrada').value = new Date().toISOString().split('T')[0];
+
+    document.getElementById('main-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const idExistente = document.getElementById('edit-id').value;
+
+        const item = {
+            cat: document.getElementById('categoria').value,
+            mod: document.getElementById('modelo').value,
+            foto: document.getElementById('foto-url').value,
+            ano: document.getElementById('ano').value,
+            km: document.getElementById('km').value || '',
+            tipoNegocio: document.getElementById('tipo-negocio').value,
+comissao: parseFloat(document.getElementById('v-comissao').value) || 0,
+compra: parseFloat(document.getElementById('v-compra').value) || 0,
+            cor: document.getElementById('cor').value || '',
+            combustivel: document.getElementById('combustivel').value || '',
+prep: parseFloat(document.getElementById('oficina').value) || 0,
+historicoOficina: [...gastosTemporariosOficina], // Salva a lista detalhada
+            venda: parseFloat(document.getElementById('v-venda').value),
+            data: document.getElementById('d-entrada').value,
+            docs: {
+                crv: document.getElementById('doc-crv').checked,
+                manual: document.getElementById('doc-manual').checked,
+                chave: document.getElementById('doc-chave').checked
+            },
+            plataformas: {
+                fb: document.getElementById('check-fb').checked,
+                olx: document.getElementById('check-olx').checked,
+                ins: document.getElementById('check-ins').checked
+            }
+        };
+
+        if (idExistente) {
+            const idx = db.findIndex(x => x.id == idExistente);
+            if(idx !== -1) db[idx] = { ...db[idx], ...item, id: db[idx].id, status: db[idx].status, dataVenda: db[idx].dataVenda };
+        } else {
+            item.id = Date.now();
+            item.status = 'Estoque';
+            item.dataVenda = null;
+            db.push(item);
+        }
+
+        render();
+        resetForm();
+        fecharFormPopup();
+    });
+
+    function editar(id) {
+        const item = db.find(x => x.id === id);
+        if(!item) return;
+
+        document.getElementById('edit-id').value = item.id;
+        document.getElementById('categoria').value = item.cat;
+        document.getElementById('modelo').value = item.mod;
+        document.getElementById('foto-url').value = item.foto || '';
+        document.getElementById('ano').value = item.ano || '';
+        document.getElementById('km').value = item.km || '';
+        document.getElementById('cor').value = item.cor || '';
+        document.getElementById('combustivel').value = item.combustivel || '';
+        document.getElementById('oficina').value = item.prep;
+        gastosTemporariosOficina = item.historicoOficina || [];
+atualizarListaOficinaInterface();
+        document.getElementById('v-compra').value = item.compra;
+        document.getElementById('v-venda').value = item.venda;
+        document.getElementById('d-entrada').value = item.data;
+        document.getElementById('check-fb').checked = item.plataformas.fb;
+        document.getElementById('doc-crv').checked = item.docs?.crv || false;
+        document.getElementById('doc-manual').checked = item.docs?.manual || false;
+        document.getElementById('doc-chave').checked = item.docs?.chave || false;
+        document.getElementById('check-olx').checked = item.plataformas.olx;
+        document.getElementById('check-ins').checked = item.plataformas.ins;
+        document.getElementById('tipo-negocio').value = item.tipoNegocio || 'Proprio';
+document.getElementById('v-comissao').value = item.comissao || '';
+toggleTipoNegocio(item.tipoNegocio || 'Proprio');
+
+        toggleFormFields(item.cat);
+
+        document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editar Produto`;
+        document.getElementById('btn-submit').innerText = "Atualizar Produto";
+        document.getElementById('btn-submit').style.background = "var(--cor-alerta)";
+        document.getElementById('btn-cancel-edit').classList.remove('hidden');
+        
+        abrirFormPopup();
+    }
+
+    function resetForm() {
+        gastosTemporariosOficina = [];
+atualizarListaOficinaInterface();
+        document.getElementById('main-form').reset();
+        document.getElementById('edit-id').value = '';
+        document.getElementById('d-entrada').value = new Date().toISOString().split('T')[0];
+        
+        document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Entrada de Produto`;
+        document.getElementById('btn-submit').innerText = "Salvar no Inventário";
+        document.getElementById('btn-submit').style.background = "var(--cor-primaria)";
+        document.getElementById('btn-cancel-edit').classList.add('hidden');
+        document.getElementById('tipo-negocio').value = 'Proprio';
+toggleTipoNegocio('Proprio');
+        toggleFormFields('Veículos');
+    }
+
+    function render() {
+        localStorage.setItem('dealer_v3', JSON.stringify(db));
+        const custosFixos = parseFloat(localStorage.getItem('dealer_custos_fixos')) || 0;
+        const gridEstoque = document.getElementById('grid-estoque');
+        gridEstoque.innerHTML = '';
+
+        const searchQuery = document.getElementById('search-bar').value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const sortType = document.getElementById('sort-filter').value;
+
+        let mEstoque = 0, mAnuncios = 0, mCapital = 0, mLucro = 0, mGirado = 0, mLucroReal = 0, totalMarkup = 0, countVendidos = 0, mLucroMensal = 0, lucroPorOrigem = {};
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth();
+        const anoAtual = hoje.getFullYear();
+
+db.forEach(item => {
+    const custoOficina = parseFloat(item.prep) || 0;
+    
+    if (!item.plataformas) item.plataformas = { fb: false, olx: false, ins: false };
+
+    // Se for comissão, o lucro é a própria comissão menos o que você gastou preparando o carro.
+    // Se for próprio, o lucro é Venda - (Compra + Oficina).
+    let lucro = 0;
+    if (item.tipoNegocio === 'Comissao') {
+        lucro = (item.comissao || 0) - custoOficina;
+    } else {
+        lucro = item.venda - ((item.compra || 0) + custoOficina);
+    }
+
+    const isAnunciado = item.plataformas.fb || item.plataformas.olx || item.plataformas.ins;
+
+    if(item.status === 'Estoque') {
+        mEstoque++;
+        // Capital em giro só soma dinheiro PRÓPRIO investido (não soma o valor do carro consignado!)
+        mCapital += item.tipoNegocio === 'Comissao' ? custoOficina : ((item.compra || 0) + custoOficina);
+        mLucro += lucro;
+        if(isAnunciado) mAnuncios++;
+    } else if(item.status === 'Vendido') {
+        mGirado += item.venda;
+        mLucroReal += lucro; // Comissão entra direto aqui como lucro real realizado!
+        
+        // Atribuição de Lucro por Canal
+        const leadVendido = leads.find(l => l.veiculoId == item.id && l.status === 'Vendido');
+        const origem = leadVendido ? leadVendido.origem : 'Direto';
+        lucroPorOrigem[origem] = (lucroPorOrigem[origem] || 0) + lucro;
+
+        // Lucro Mensal
+        if (item.dataVenda) {
+            const dV = new Date(item.dataVenda + 'T12:00:00');
+            if (dV.getMonth() === mesAtual && dV.getFullYear() === anoAtual) mLucroMensal += lucro;
+        }
+
+        const custoTotal = (item.compra || 0) + custoOficina;
+        if(custoTotal > 0) totalMarkup += (lucro / custoTotal) * 100;
+        countVendidos++;
+    }
+});
+
+        document.getElementById('m-estoque').innerText = mEstoque;
+        document.getElementById('m-anuncios').innerText = mAnuncios;
+        document.getElementById('m-capital').innerText = `R$ ${mCapital.toLocaleString('pt-BR')}`;
+        document.getElementById('m-lucro').innerText = `R$ ${mLucro.toLocaleString('pt-BR')}`;
+        document.getElementById('m-girado').innerText = `R$ ${mGirado.toLocaleString('pt-BR')}`;
+        document.getElementById('m-markup').innerText = countVendidos > 0 ? (totalMarkup / countVendidos).toFixed(1) + '%' : '0%';
+        document.getElementById('m-ticket').innerText = countVendidos > 0 ? `R$ ${(mLucroReal / countVendidos).toLocaleString('pt-BR', {maximumFractionDigits:0})}` : 'R$ 0';
+        
+        const liquido = mLucroMensal - custosFixos;
+        document.getElementById('m-liquido').innerText = `R$ ${liquido.toLocaleString('pt-BR')}`;
+        document.getElementById('m-liquido').style.color = liquido >= 0 ? 'var(--cor-primaria)' : 'var(--cor-perigo)';
+
+        const melhorCanal = Object.keys(lucroPorOrigem).length > 0 
+            ? Object.keys(lucroPorOrigem).reduce((a, b) => lucroPorOrigem[a] > lucroPorOrigem[b] ? a : b) 
+            : "---";
+        document.getElementById('m-canal').innerText = melhorCanal;
+
+        // Cálculo da Taxa de Conversão de Leads
+        const totalLeads = leads.length;
+        const leadsConvertidos = leads.filter(l => l.status === 'Vendido').length;
+        const taxaConversao = totalLeads > 0 ? ((leadsConvertidos / totalLeads) * 100).toFixed(1) : '0';
+        document.getElementById('m-conversao').innerText = taxaConversao + '%';
+
+let itemsFiltrados = db.filter(item => {
+    const modeloTratado = item.mod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const passaPesquisa = modeloTratado.includes(searchQuery);
+    
+    let passaFiltroRapido = true;
+    if (filtroRapidoAtual === 'estoque') passaFiltroRapido = (item.status === 'Estoque');
+    if (filtroRapidoAtual === 'vendidos') passaFiltroRapido = (item.status === 'Vendido');
+    if (filtroRapidoAtual === 'anunciados') passaFiltroRapido = (item.status === 'Estoque' && (item.plataformas?.fb || item.plataformas?.olx || item.plataformas?.ins));
+    if (filtroRapidoAtual === 'veiculos') passaFiltroRapido = (item.cat === 'Veículos');
+    if (filtroRapidoAtual === 'outros')   passaFiltroRapido = (item.cat === 'Outros');
+    
+    return passaPesquisa && passaFiltroRapido;
+});
+
+        if (sortType === 'recente') {
+            itemsFiltrados.sort((a, b) => new Date(b.data) - new Date(a.data));
+        } else if (sortType === 'preco-maior') {
+            itemsFiltrados.sort((a, b) => b.venda - a.venda);
+        } else if (sortType === 'preco-menor') {
+            itemsFiltrados.sort((a, b) => a.venda - b.venda);
+        } else if (sortType === 'tempo') {
+            itemsFiltrados.sort((a, b) => new Date(a.data) - new Date(b.data));
+        }
+
+        itemsFiltrados.forEach(item => {
+            const dataFim = item.status === 'Vendido' && item.dataVenda ? new Date(item.dataVenda) : new Date();
+            const dias = Math.ceil(Math.abs(dataFim - new Date(item.data)) / (1000 * 60 * 60 * 24));
+            // Linha de segurança para dados antigos não quebrarem o cálculo do lucro
+if (!item.historicoOficina) item.historicoOficina = [];
+            
+            const isAnunciado = item.plataformas?.fb || item.plataformas?.olx || item.plataformas?.ins;
+            const labelTempo = item.status === 'Vendido' ? `Vendido em ${dias} dias` : `${dias} dias`;
+
+            let classeGiro = 'giro-novidade';
+            let tagGiroHtml = '<span class="giro-tag" style="background:#059669">Novidade</span>';
+            if(item.status !== 'Vendido') {
+                if (dias > 10 && dias <= 25) {
+                    classeGiro = 'giro-normal';
+                    tagGiroHtml = '<span class="giro-tag" style="background:#d97706">Giro OK</span>';
+                } else if (dias > 25) {
+                    classeGiro = 'giro-critico';
+                    tagGiroHtml = '<span class="giro-tag" style="background:#dc2626;">Encalhado!</span>';
+                }
+} else {
+                tagGiroHtml = ''; 
+                if(item.comprador && item.comprador.nome) {
+                    tagGiroHtml = `<span class="giro-tag" style="background:#1e293b; color:var(--texto-s); border: 1px solid var(--borda)">👤 ${item.comprador.nome}</span>`;
+                }
+            }
+
+            // Lógica de Galeria (Ideia 4)
+            const fotos = item.foto ? item.foto.split('\n').filter(url => url.trim() !== '') : [];
+            let imagemHtml = '';
+            
+            if(fotos.length > 0) {
+                imagemHtml = `
+                    <div class="card-img-container" id="carousel-${item.id}">
+                        <img src="${fotos[0]}" class="card-img" style="border:none" data-index="0">
+                        ${fotos.length > 1 ? `
+                            <button class="nav-foto nav-prev" onclick="mudarFoto(${item.id}, -1, event)"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button class="nav-foto nav-next" onclick="mudarFoto(${item.id}, 1, event)"><i class="fa-solid fa-chevron-right"></i></button>
+                            <div class="foto-counter">1 / ${fotos.length}</div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                imagemHtml = `<div class="card-img-placeholder"><i class="fa-solid ${item.cat === 'Veículos' ? 'fa-motorcycle' : 'fa-box'}"></i></div>`;
+            }
+
+            // Markup Individual (Ideia 3)
+            const custoTotal = (item.compra || 0) + (item.prep || 0);
+            let lucroItem = 0;
+            if (item.tipoNegocio === 'Comissao') lucroItem = (item.comissao || 0) - (item.prep || 0);
+            else lucroItem = item.venda - custoTotal;
+
+            // ROI: Retorno sobre capital investido
+            const roiCalculado = custoTotal > 0 ? ((lucroItem / custoTotal) * 100).toFixed(0) : '100';
+            const roiHtml = `<span class="markup-badge" title="Retorno sobre o Capital" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd;">ROI: ${roiCalculado}%</span>`;
+            
+            // Custo de Pátio Estimado (Média de R$ 25,00/dia entre depreciação e juros do capital)
+            let custoPatioHtml = '';
+            if (item.status !== 'Vendido' && item.tipoNegocio !== 'Comissao') {
+                const custoAcumulado = dias * 25;
+                custoPatioHtml = `<div style="display:flex; justify-content:space-between; color:var(--cor-perigo); font-size:11px; margin-top:5px;"><span>Custo de Pátio est.:</span> <b>R$ ${custoAcumulado.toLocaleString('pt-BR')}</b></div>`;
+            }
+
+            const cardHtml = criarTemplateCard(item, labelTempo, tagGiroHtml, classeGiro, imagemHtml, roiHtml, custoPatioHtml);
+            gridEstoque.innerHTML += cardHtml;
+        });
+
+        renderLeads();
+        renderAvaliacoes();
+        renderMetas();
+    }
+
+    // --- SISTEMA DE COMPRAS E AVALIAÇÕES ---
+    function abrirModalAvaliacao() {
+        document.getElementById('av-modelo').value = '';
+        document.getElementById('av-mercado').value = '';
+        document.getElementById('av-outros-gastos').value = '';
+        
+        // Reseta selects da FIPE
+        document.getElementById('fipe-marca').innerHTML = '<option value="">Selecione a Marca</option>';
+        document.getElementById('fipe-modelo').innerHTML = '<option value="">Selecione o Modelo</option>';
+        document.getElementById('fipe-ano').innerHTML = '<option value="">Selecione o Ano</option>';
+        
+        if (fipeChart) fipeChart.destroy();
+        document.getElementById('fipe-graph-container').style.display = 'none';
+        
+        loadFipeBrands();
+
+        document.querySelectorAll('.check-av').forEach(c => c.checked = false);
+        calcularSugestaoCompra();
+        document.getElementById('modal-avaliacao').style.display = 'flex';
+    }
+
+    // --- INTEGRAÇÃO API FIPE ---
+    const FIPE_API = "https://parallelum.com.br/fipe/api/v1";
+
+    async function loadFipeBrands() {
+        const tipo = document.getElementById('fipe-tipo').value;
+        const select = document.getElementById('fipe-marca');
+        document.getElementById('fipe-loading').style.display = 'block';
+        
+        try {
+            const res = await fetch(`${FIPE_API}/${tipo}/marcas`);
+            const marcas = await res.json();
+            select.innerHTML = '<option value="">Selecione a Marca</option>' + 
+                marcas.map(m => `<option value="${m.codigo}">${m.nome}</option>`).join('');
+        } catch (e) { console.error("Erro FIPE:", e); }
+        document.getElementById('fipe-loading').style.display = 'none';
+    }
+
+    async function loadFipeModels() {
+        const tipo = document.getElementById('fipe-tipo').value;
+        const marca = document.getElementById('fipe-marca').value;
+        const select = document.getElementById('fipe-modelo');
+        if(!marca) return;
+
+        document.getElementById('fipe-loading').style.display = 'block';
+        try {
+            const res = await fetch(`${FIPE_API}/${tipo}/marcas/${marca}/modelos`);
+            const data = await res.json();
+            select.innerHTML = '<option value="">Selecione o Modelo</option>' + 
+                data.modelos.map(m => `<option value="${m.codigo}">${m.nome}</option>`).join('');
+        } catch (e) { console.error("Erro FIPE:", e); }
+        document.getElementById('fipe-loading').style.display = 'none';
+    }
+
+    async function loadFipeYears() {
+        const tipo = document.getElementById('fipe-tipo').value;
+        const marca = document.getElementById('fipe-marca').value;
+        const modelo = document.getElementById('fipe-modelo').value;
+        const select = document.getElementById('fipe-ano');
+        if(!modelo) return;
+
+        document.getElementById('fipe-loading').style.display = 'block';
+        try {
+            const res = await fetch(`${FIPE_API}/${tipo}/marcas/${marca}/modelos/${modelo}/anos`);
+            const anos = await res.json();
+            select.innerHTML = '<option value="">Selecione o Ano</option>' + 
+                anos.map(a => `<option value="${a.codigo}">${a.nome}</option>`).join('');
+        } catch (e) { console.error("Erro FIPE:", e); }
+        document.getElementById('fipe-loading').style.display = 'none';
+    }
+
+    async function getFipePrice() {
+        const tipo = document.getElementById('fipe-tipo').value;
+        const marca = document.getElementById('fipe-marca').value;
+        const modelo = document.getElementById('fipe-modelo').value;
+        const ano = document.getElementById('fipe-ano').value;
+        if(!ano) return;
+
+        document.getElementById('fipe-loading').style.display = 'block';
+        try {
+            const res = await fetch(`${FIPE_API}/${tipo}/marcas/${marca}/modelos/${modelo}/anos/${ano}`);
+            const data = await res.json();
+            
+            // Preenche automaticamente os campos de avaliação
+            document.getElementById('av-modelo').value = data.Modelo;
+            document.getElementById('av-mercado').value = data.Valor.replace(/[^\d,]/g, '').replace(',', '.');
+            
+            updateDepreciationGraph(tipo, marca, modelo);
+            calcularSugestaoCompra();
+        } catch (e) { console.error("Erro FIPE:", e); }
+        document.getElementById('fipe-loading').style.display = 'none';
+    }
+
+    async function updateDepreciationGraph(tipo, marca, modelo) {
+        const selectAno = document.getElementById('fipe-ano');
+        const anosArray = Array.from(selectAno.options).filter(opt => opt.value !== "").slice(0, 8).reverse();
+        
+        if (anosArray.length < 2) return;
+
+        document.getElementById('fipe-graph-container').style.display = 'block';
+        const labels = [];
+        const prices = [];
+
+        for (const opt of anosArray) {
+            try {
+                const res = await fetch(`${FIPE_API}/${tipo}/marcas/${marca}/modelos/${modelo}/anos/${opt.value}`);
+                const data = await res.json();
+                labels.push(data.AnoModelo === 32000 ? '0km' : data.AnoModelo);
+                prices.push(parseFloat(data.Valor.replace(/[^\d,]/g, '').replace(',', '.')));
+            } catch (e) { console.error(e); }
+        }
+
+        renderFipeChart(labels, prices);
+    }
+
+    function renderFipeChart(labels, prices) {
+        const ctx = document.getElementById('fipeGraph').getContext('2d');
+        if (fipeChart) fipeChart.destroy();
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const color = isDark ? '#a78bfa' : '#8b5cf6';
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+
+        fipeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Curva de Mercado (R$)',
+                    data: prices,
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        ticks: { color: textColor, font: { size: 10 }, callback: v => 'R$' + v.toLocaleString('pt-BR') },
+                        grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { 
+                        ticks: { color: textColor, font: { size: 10 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function calcularSugestaoCompra() {
+        const vMercado = parseFloat(document.getElementById('av-mercado').value) || 0;
+        const margemPct = (parseFloat(document.getElementById('av-margem').value) || 0) / 100;
+        let gastos = parseFloat(document.getElementById('av-outros-gastos').value) || 0;
+
+        document.querySelectorAll('.check-av:checked').forEach(c => {
+            gastos += parseFloat(c.dataset.valor);
+        });
+
+        // Lógica: Preço Máximo = (Valor Mercado / (1 + Margem)) - Gastos
+        // Ex: Se quer 20% de lucro sobre o custo: Preço Venda / 1.20
+        const ofertaMaxima = (vMercado / (1 + margemPct)) - gastos;
+        const lucroPrevisto = vMercado - (ofertaMaxima + gastos);
+
+        document.getElementById('av-oferta-maxima').innerText = `R$ ${Math.max(0, ofertaMaxima).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        document.getElementById('av-lucro-estimado').innerText = `Lucro previsto: R$ ${Math.max(0, lucroPrevisto).toLocaleString('pt-BR', {minimumFractionDigits: 2})} | Gastos: R$ ${gastos}`;
+    }
+
+    function salvarAvaliacao() {
+        const av = {
+            id: Date.now(),
+            modelo: document.getElementById('av-modelo').value || 'Sem Nome',
+            valorMercado: parseFloat(document.getElementById('av-mercado').value) || 0,
+            oferta: parseFloat(document.getElementById('av-oferta-maxima').innerText.replace('R$ ','').replace('.','').replace(',','.')) || 0,
+            data: new Date().toLocaleDateString('pt-BR')
+        };
+        avaliacoes.push(av);
+        localStorage.setItem('dealer_avaliacoes', JSON.stringify(avaliacoes));
+        closeModal('modal-avaliacao');
+        render();
+    }
+
+    function renderAvaliacoes() {
+        const container = document.getElementById('lista-avaliacoes');
+        if(!container) return;
+        container.innerHTML = '';
+
+        avaliacoes.forEach(av => {
+            container.innerHTML += `
+                <div class="card" style="border-left: 4px solid var(--cor-compra)">
+                    <div class="card-body">
+                        <div style="display:flex; justify-content:space-between">
+                            <span class="status-tag" style="background:var(--cor-compra); color:white">AVALIAÇÃO</span>
+                            <small style="color:var(--texto-s)">${av.data}</small>
+                        </div>
+                        <h3 style="margin:10px 0">${av.modelo}</h3>
+                        <div style="font-size: 13px; color: var(--texto-s)">Mercado: R$ ${av.valorMercado.toLocaleString('pt-BR')}</div>
+                        <div style="font-size: 18px; font-weight: bold; color: var(--cor-compra); margin: 5px 0;">
+                            Oferta: R$ ${av.oferta.toLocaleString('pt-BR')}
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-outline" onclick="excluirAvaliacao(${av.id})"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn btn-primary" style="background: var(--cor-compra)" onclick="converterParaEstoque(${av.id})">Comprei!</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function converterParaEstoque(id) {
+        const av = avaliacoes.find(x => x.id === id);
+        if(!av) return;
+        
+        abrirFormPopup();
+        document.getElementById('modelo').value = av.modelo;
+        document.getElementById('v-compra').value = av.oferta;
+        document.getElementById('v-venda').value = av.valorMercado;
+        
+        // Remove da lista de avaliações após converter
+        avaliacoes = avaliacoes.filter(x => x.id !== id);
+        localStorage.setItem('dealer_avaliacoes', JSON.stringify(avaliacoes));
+    }
+
+    function excluirAvaliacao(id) {
+        avaliacoes = avaliacoes.filter(x => x.id !== id);
+        localStorage.setItem('dealer_avaliacoes', JSON.stringify(avaliacoes));
+        render();
+    }
+
+    function mudarFoto(id, direcao, event) {
+        event.stopPropagation();
+        const item = db.find(x => x.id === id);
+        const fotos = item.foto.split('\n').filter(url => url.trim() !== '');
+        const container = document.getElementById(`carousel-${id}`);
+        const img = container.querySelector('img');
+        const counter = container.querySelector('.foto-counter');
+        
+        let currentIndex = parseInt(img.getAttribute('data-index'));
+        currentIndex = (currentIndex + direcao + fotos.length) % fotos.length;
+        
+        img.src = fotos[currentIndex];
+        img.setAttribute('data-index', currentIndex);
+        counter.innerText = `${currentIndex + 1} / ${fotos.length}`;
+    }
+
+    // CRM / LEADS (Ideia 1)
+    function renderLeads() {
+        localStorage.setItem('dealer_leads', JSON.stringify(leads));
+        const lista = document.getElementById('lista-leads');
+        if(!lista) return;
+        lista.innerHTML = '';
+
+        leads.forEach(lead => {
+            const veiculo = db.find(v => v.id == lead.veiculoId);
+            const colors = { 'Novo': '#3b82f6', 'Negociando': '#f59e0b', 'Agendado': '#10b981', 'Vendido': '#10b981', 'Perdido': '#ef4444' };
+            const color = colors[lead.status] || '#64748b';
+            
+            // Alerta de Follow-up atrasado
+            const hoje = new Date().toISOString().split('T')[0];
+            const isAtrasado = lead.followup && lead.followup < hoje && lead.status !== 'Perdido';
+            const styleAtraso = isAtrasado ? 'border: 2px solid var(--cor-perigo); box-shadow: 0 0 10px rgba(225, 29, 72, 0.2);' : '';
+
+            lista.innerHTML += `
+                <div class="card" style="${styleAtraso}">
+                    <div class="card-body">
+                        <div style="display:flex; justify-content:space-between">
+                            <span class="status-tag" style="background:${color}22; color:${color}; border: 1px solid ${color}44;">
+                                <i class="fa-solid fa-circle" style="font-size: 8px; margin-right: 5px;"></i>
+                                ${lead.status}
+                            </span>
+                            <small style="color:var(--texto-s)">${lead.data}</small>
+                        </div>
+                        <h3 style="margin:10px 0">${lead.nome} <small style="font-size:10px; color:var(--texto-s)">via ${lead.origem || 'Direto'}</small></h3>
+                        <div style="color:var(--cor-primaria); font-weight:bold; margin-bottom:10px;">
+                            <i class="fa-brands fa-whatsapp"></i> ${lead.whats}
+                        </div>
+                        ${lead.followup ? `<div style="font-size:11px; margin-bottom:8px; color:${isAtrasado ? 'var(--cor-perigo)' : 'var(--texto-s)'}">
+                            <i class="fa-solid fa-clock"></i> Próximo contato: ${new Date(lead.followup + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        </div>` : ''}
+                        <div style="font-size:12px; padding:8px; background:var(--bg-input); border-radius:6px;">
+                            <b>Interesse:</b> ${veiculo ? veiculo.mod : 'Veículo não encontrado'}
+                        </div>
+                        <div class="card-footer" style="gap: 4px;">
+                            <button class="btn btn-outline" style="color:var(--cor-perigo)" onclick="excluirLead(${lead.id})"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn btn-outline" style="font-size: 11px; flex: 1;" onclick="enviarMensagemRapida('${lead.whats}', 'visita', '${veiculo?.mod}')">📅 Visita</button>
+                            <button class="btn btn-outline" style="font-size: 11px; flex: 1;" onclick="enviarMensagemRapida('${lead.whats}', 'fotos', '${veiculo?.mod}')">📸 Fotos</button>
+                            <a href="https://wa.me/55${lead.whats.replace(/\D/g,'')}" target="_blank" class="btn btn-primary" style="background:#25d366; text-decoration:none; padding: 8px 12px;"><i class="fa-brands fa-whatsapp"></i></a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function enviarMensagemRapida(whats, tipo, veiculo) {
+        const fone = whats.replace(/\D/g, '');
+        let texto = "";
+        if (tipo === 'visita') {
+            texto = `Olá! Vi que você se interessou pela *${veiculo}*. Que tal agendar uma visita para ver ela de perto hoje ou amanhã?`;
+        } else if (tipo === 'fotos') {
+            texto = `Oi! Tudo bem? Estou separando aqui mais fotos e vídeos detalhados da *${veiculo}* que você viu. Posso te enviar por aqui?`;
+        }
+        window.open(`https://wa.me/55${fone}?text=${encodeURIComponent(texto)}`, '_blank');
+    }
+
+    function abrirModalLead(veiculoId = null) {
+        document.getElementById('lead-id').value = '';
+        document.getElementById('lead-nome').value = '';
+        document.getElementById('lead-whats').value = '';
+        document.getElementById('lead-followup').value = '';
+        document.getElementById('lead-origem').value = 'Facebook';
+        const select = document.getElementById('lead-veiculo');
+        select.innerHTML = db.map(v => `<option value="${v.id}" ${v.id == veiculoId ? 'selected' : ''}>${v.mod}</option>`).join('');
+        document.getElementById('modal-lead').style.display = 'flex';
+    }
+
+    function configurarCustos() {
+        const atual = localStorage.getItem('dealer_custos_fixos') || 0;
+        const valor = prompt("Custos Fixos Mensais (Aluguel, Luz, Marketing, Pro-labore):", atual);
+        if (valor !== null) {
+            localStorage.setItem('dealer_custos_fixos', valor);
+            render();
+        }
+    }
+
+    function salvarLead() {
+        const novo = {
+            id: Date.now(),
+            nome: document.getElementById('lead-nome').value,
+            whats: document.getElementById('lead-whats').value,
+            veiculoId: document.getElementById('lead-veiculo').value,
+            origem: document.getElementById('lead-origem').value,
+            followup: document.getElementById('lead-followup').value,
+            status: document.getElementById('lead-status').value,
+            data: new Date().toLocaleDateString('pt-BR')
+        };
+        leads.push(novo);
+        closeModal('modal-lead');
+        render();
+    }
+
+    function excluirLead(id) {
+        if(confirm("Excluir este contato?")) {
+            leads = leads.filter(l => l.id !== id);
+            render();
+        }
+    }
+
+    function gerarAnuncio(id) {
+        const item = db.find(i => i.id === id);
+        let dadosExtras = '';
+        if(item.cat === 'Veículos') {
+            if(item.km) dadosExtras += `⚡ Quilometragem: ${parseInt(item.km).toLocaleString('pt-BR')} KM\n`;
+            if(item.combustivel) dadosExtras += `⛽ Combustível: ${item.combustivel}\n`;
+            if(item.cor) dadosExtras += `🎨 Cor: ${item.cor}\n`;
+        }
+
+        const texto = `🔥 OPORTUNIDADE: ${item.mod.toUpperCase()}
+${item.ano ? '📅 Ano: ' + item.ano : ''}
+${dadosExtras}✅ Revisado e com Procedência de Qualidade
+💰 Apenas: R$ ${item.venda.toLocaleString('pt-BR')}
+
+📍 Localização: Central de Vendas
+🚀 Não perca essa chance, faça uma simulação via Direct/PV!
+#vendas #revenda #oportunidade #veiculos`;
+        
+        document.getElementById('texto-gerado').innerText = texto;
+        document.querySelector('#modal-anuncio h3').innerText = '🚀 Texto Sugerido';
+        document.getElementById('modal-anuncio').style.display = 'flex';
+    }
+
+    function gerarCardWhatsApp(id) {
+        const item = db.find(i => i.id === id);
+        if (!item) return;
+
+        // Preenche o template invisível
+        document.getElementById('card-export-titulo').innerText = item.mod.toUpperCase();
+        document.getElementById('card-export-cat').innerText = item.cat || 'Veículo';
+        document.getElementById('card-export-preco').innerText = `R$ ${item.venda.toLocaleString('pt-BR')}`;
+        
+        let detalhesHtml = `<i class="fa-solid fa-calendar" style="color:#10b981; width:25px;"></i> ${item.ano || '---'}<br>`;
+        if(item.km) detalhesHtml += `<i class="fa-solid fa-gauge" style="color:#10b981; width:25px;"></i> ${parseInt(item.km).toLocaleString('pt-BR')} KM<br>`;
+        if(item.cor) detalhesHtml += `<i class="fa-solid fa-palette" style="color:#10b981; width:25px;"></i> ${item.cor}<br>`;
+        detalhesHtml += `<i class="fa-solid fa-shield-check" style="color:#10b981; width:25px;"></i> Revisado com Garantia`;
+        
+        document.getElementById('card-export-detalhes').innerHTML = detalhesHtml;
+
+        const imgContainer = document.getElementById('card-export-img');
+        if (item.foto) {
+            imgContainer.innerHTML = `<img src="${item.foto}" style="width:100%; height:100%; object-fit:cover;">`;
+        } else {
+            imgContainer.innerHTML = `<i class="fa-solid fa-motorcycle" style="font-size: 80px; color: #334155;"></i>`;
+        }
+
+        // Pequeno delay para garantir que a imagem no DOM foi renderizada
+        setTimeout(() => {
+            const exportContainer = document.getElementById('card-export-container');
+            html2canvas(exportContainer, {
+                useCORS: true,
+                backgroundColor: '#0b1120',
+                scale: 2 // Aumenta a resolução para evitar serrilhado
+            }).then(canvas => {
+                const previewImg = document.getElementById('img-preview-card');
+                previewImg.src = canvas.toDataURL("image/png");
+                document.getElementById('modal-card').style.display = 'flex';
+            }).catch(err => {
+                console.error("Erro ao gerar card:", err);
+                alert("Houve um erro ao gerar a imagem. Verifique se a URL da foto é válida.");
+            });
+        }, 500);
+    }
+
+    // Função auxiliar para gerar a legenda do Instagram
+    function _gerarLegendaInstagramTexto(item) {
+        let dadosExtras = '';
+        if(item.cat === 'Veículos') {
+            if(item.ano) dadosExtras += `🗓 Ano: ${item.ano}\n`;
+            if(item.km) dadosExtras += `🛣 KM: ${parseInt(item.km).toLocaleString('pt-BR')}\n`;
+            if(item.cor) dadosExtras += `🎨 Cor: ${item.cor}\n`;
+            if(item.combustivel) dadosExtras += `⛽ Combustível: ${item.combustivel}\n`;
+        }
+
+        return `🌟 NOVIDADE NA ROCHA SELECT 🌟\n\n🔥 ${item.mod.toUpperCase()}\n\n${dadosExtras}✅ Revisado e com procedência\n💰 Investimento: R$ ${item.venda.toLocaleString('pt-BR')}\n\n🚀 Não perca essa oportunidade!\n📲 Entre em contato agora pelo Direct ou WhatsApp.\n📍 Visite nossa loja física.\n\n#rochaselect #vendas #veiculos #seminovos #oportunidade #moto #carro`;
+    }
+
+    function gerarCardInstagram(id) {
+        const item = db.find(i => i.id === id);
+        if (!item) return;
+
+        // 1. Gerar a legenda
+        const legenda = _gerarLegendaInstagramTexto(item);
+        document.getElementById('insta-post-caption').value = legenda;
+
+        // Preenche o template quadrado
+        document.getElementById('insta-export-titulo').innerText = item.mod.toUpperCase();
+        document.getElementById('insta-export-cat').innerText = item.cat || 'Veículo';
+        document.getElementById('insta-export-preco').innerText = `R$ ${item.venda.toLocaleString('pt-BR')}`;
+        
+        let detalhesHtml = `
+            <span><i class="fa-solid fa-calendar"></i> ${item.ano || '---'}</span>
+            <span><i class="fa-solid fa-gauge"></i> ${item.km ? parseInt(item.km).toLocaleString('pt-BR') : '---'} KM</span>
+        `;
+        document.getElementById('insta-export-detalhes').innerHTML = detalhesHtml;
+
+        const imgContainer = document.getElementById('insta-export-img');
+        if (item.foto) {
+            imgContainer.innerHTML = `<img src="${item.foto}" style="width:100%; height:100%; object-fit:cover;">`;
+        } else {
+            imgContainer.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#1e293b;"><i class="fa-solid fa-motorcycle" style="font-size: 80px; color: #334155;"></i></div>`;
+        }
+
+        setTimeout(() => {
+            const exportContainer = document.getElementById('card-export-insta-container');
+            html2canvas(exportContainer, {
+                useCORS: true,
+                backgroundColor: '#020617',
+                scale: 2
+            }).then(canvas => {
+                // 2. Exibir a imagem e a legenda no novo modal
+                document.getElementById('insta-post-image-preview').src = canvas.toDataURL("image/png");
+                document.getElementById('modal-instagram-post').style.display = 'flex';
+            }).catch(err => {
+                console.error("Erro ao gerar card Instagram:", err);
+                alert("Erro ao gerar a imagem para o Instagram.");
+            });
+        }, 500);
+    }
+
+    function downloadInstagramImage() {
+        const link = document.createElement('a');
+        link.download = `RochaSelect_Instagram_${Date.now()}.png`;
+        link.href = document.getElementById('insta-post-image-preview').src;
+        link.click();
+    }
+
+    function copyInstagramCaption() {
+        const text = document.getElementById('insta-post-caption').value;
+        navigator.clipboard.writeText(text);
+        alert("Legenda copiada para a área de transferência!");
+    }
+
+    function downloadCard() {
+        const link = document.createElement('a');
+        link.download = `RochaSelect_${Date.now()}.png`;
+        link.href = document.getElementById('img-preview-card').src;
+        link.click();
+    }
+
+    function abrirSimulador(id) {
+        activeSimId = id;
+        document.getElementById('sim-entrada').value = 0;
+        calcularFinanciamento();
+        document.getElementById('modal-financeiro').style.display = 'flex';
+    }
+
+    function calcularFinanciamento() {
+        const item = db.find(i => i.id === activeSimId);
+        if(!item) return;
+
+        const entrada = parseFloat(document.getElementById('sim-entrada').value) || 0;
+        const saldoFinanciar = item.venda - entrada;
+        const containerResultados = document.getElementById('dados-financiamento');
+
+        if(saldoFinanciar <= 0) {
+            containerResultados.innerHTML = `<div style="color:var(--cor-primaria); text-align:center; font-weight:bold;">A entrada cobre o valor integral do veículo!</div>`;
+            return;
+        }
+
+        const tx = 0.0199; 
+        const calcParcela = (meses) => {
+            return (saldoFinanciar * (tx * Math.pow(1 + tx, meses))) / (Math.pow(1 + tx, meses) - 1);
+        };
+
+        containerResultados.innerHTML = `
+            <div style="margin-bottom:10px; font-weight:bold; color:var(--texto-p)">Valor total: R$ ${item.venda.toLocaleString('pt-BR')}</div>
+            <div style="margin-bottom:15px; font-weight:bold; color:var(--cor-anuncio)">Financiar: R$ ${saldoFinanciar.toLocaleString('pt-BR')}</div>
+            <div class="calc-row"><span>12 parcelas de:</span> <b>R$ ${calcParcela(12).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} /mês</b></div>
+            <div class="calc-row"><span>24 parcelas de:</span> <b>R$ ${calcParcela(24).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} /mês</b></div>
+            <div class="calc-row"><span>36 parcelas de:</span> <b>R$ ${calcParcela(36).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} /mês</b></div>
+            <div class="calc-row"><span>48 parcelas de:</span> <b>R$ ${calcParcela(48).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} /mês</b></div>
+            <small style="display:block; margin-top:10px; color:var(--texto-s); font-size:11px;">*Apenas uma simulação prévia baseada em taxas médias de 1.99% a.m.</small>
+        `;
+    }
+
+    function imprimirCartaz(id) {
+        const item = db.find(i => i.id === id);
+        if(!item) return;
+        
+        // Configuração do WhatsApp para o QR Code (Substitua pelo seu número)
+        const meuWhats = "5511999999999"; 
+        const mensagem = encodeURIComponent(`Olá, vi o anúncio do ${item.mod} e gostaria de mais informações.`);
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://wa.me/${meuWhats}?text=${mensagem}`;
+
+        const printSection = document.getElementById('print-section');
+        printSection.innerHTML = `
+            <div class="print-title">ROCHA SELECT // OFERTA</div>
+            <div style="font-size: 32px; font-weight: bold; text-align:center; margin-bottom: 20px;">${item.mod.toUpperCase()}</div>
+            <div class="print-price">R$ ${item.venda.toLocaleString('pt-BR')}</div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 30px;">
+                <div class="print-details" style="flex: 1;">
+                    ${item.ano ? '<div><span>ANO:</span> ' + item.ano + '</div>' : ''}
+                    ${item.km ? '<div><span>KM:</span> ' + parseInt(item.km).toLocaleString('pt-BR') + ' KM</div>' : ''}
+                    ${item.cor ? '<div><span>COR:</span> ' + item.cor + '</div>' : ''}
+                    <div><span>CONDIÇÃO:</span> REVISADO COM GARANTIA</div>
+                </div>
+                
+                <div style="text-align: center; width: 200px; border-left: 2px solid #eee; padding-left: 20px;">
+                    <img src="${qrCodeUrl}" style="width: 150px; height: 150px; margin-bottom: 10px;">
+                    <div style="font-size: 12px; font-weight: bold; color: #555;">ESCANEIE PARA<br>FALAR NO WHATSAPP</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px; font-size: 18px; text-align: center; font-weight: bold;">
+                QUALIDADE E PROCEDÊNCIA É NA ROCHA SELECT
+            </div>
+        `;
+        window.print();
+    }
+
+    function copyText() {
+        const text = document.getElementById('texto-gerado').innerText;
+        navigator.clipboard.writeText(text);
+        alert("Texto copiado para a área de transferência!");
+    }
+
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+    
+function vender(id) {
+    const idx = db.findIndex(x => x.id === id);
+    if (idx === -1) return;
+
+    // Se o item já estava vendido, volta para o estoque sem abrir modal
+    if (db[idx].status === 'Vendido') {
+        if(confirm("Deseja retornar este veículo para o estoque? Dados do comprador serão limpos.")) {
+            db[idx].status = 'Estoque';
+            db[idx].dataVenda = null;
+            db[idx].comprador = null;
+            render();
+        }
+        return;
+    }
+
+    // Se está em estoque, abre o modal do CRM para preenchimento
+    document.getElementById('venda-item-id').value = id;
+    document.getElementById('comprador-nome').value = '';
+    document.getElementById('comprador-whats').value = '';
+    document.getElementById('venda-pagamento').value = 'Financiamento';
+    
+    document.getElementById('modal-venda').style.display = 'flex';
+}
+
+function confirmarVendaAvancada() {
+    const id = parseInt(document.getElementById('venda-item-id').value);
+    const nome = document.getElementById('comprador-nome').value.trim();
+    const whats = document.getElementById('comprador-whats').value.trim();
+    const pagamento = document.getElementById('venda-pagamento').value;
+
+    if (!nome) {
+        alert("Por favor, insira o nome do comprador.");
+        return;
+    }
+
+    const idx = db.findIndex(x => x.id === id);
+    if (idx !== -1) {
+        db[idx].status = 'Vendido';
+        db[idx].dataVenda = new Date().toISOString().split('T')[0];
+        
+        // Salva os dados do comprador dentro do objeto do item
+        db[idx].comprador = {
+            nome: nome,
+            whats: whats,
+            pagamento: pagamento
+        };
+
+        closeModal('modal-venda');
+        render();
+    }
+}
+    
+    function excluir(id) { if(confirm("Deseja realmente remover este item?")) { db = db.filter(x => x.id !== id); render(); } }
+
+    function exportarBackup() {
+        if(db.length === 0) { alert("Não há dados para exportar."); return; }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `dealerhub_backup_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importarBackup(input) {
+        const reader = new FileReader();
+        reader.onload = function(){
+            try {
+                const dadosCarregados = JSON.parse(reader.result);
+                if(Array.isArray(dadosCarregados)) {
+                    if(confirm("Deseja substituir seus dados atuais pelos dados do arquivo importado?")) {
+                        db = dadosCarregados;
+                        render();
+                        alert("Dados importados com sucesso!");
+                    }
+                } else {
+                    alert("Formato de arquivo inválido.");
+                }
+            } catch(e) {
+                alert("Erro ao ler o arquivo.");
+            }
+        };
+        if(input.files[0]) reader.readAsText(input.files[0]);
+    }
+
+    // --- SISTEMA DE METAS DIÁRIAS ---
+    function getDefaultMetas() {
+        return [
+            { id: 'm1', label: 'Procurar/Avaliar Veículos', meta: 5, atual: 0, icon: 'fa-search' },
+            { id: 'm2', label: 'Responder Novos Leads', meta: 10, atual: 0, icon: 'fa-comments' },
+            { id: 'm3', label: 'Postar Anúncios (Marketplace/OLX)', meta: 3, atual: 0, icon: 'fa-bullhorn' },
+            { id: 'm4', label: 'Fazer Follow-up (Retornos)', meta: 5, atual: 0, icon: 'fa-phone-flip' }
+        ];
+    }
+
+    function renderMetas() {
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        if (metasData.data !== hoje) {
+            metasData.data = hoje;
+            metasData.itens.forEach(m => m.atual = 0);
+            localStorage.setItem('dealer_metas', JSON.stringify(metasData));
+        }
+
+        const container = document.getElementById('container-metas');
+        if (!container) return;
+        container.innerHTML = '';
+
+        metasData.itens.forEach(meta => {
+            const pct = Math.min(100, (meta.atual / meta.meta) * 100);
+            const isConcluido = meta.atual >= meta.meta;
+            
+            container.innerHTML += `
+                <div class="card" style="border-left: 4px solid ${isConcluido ? 'var(--cor-primaria)' : 'var(--cor-anuncio)'}">
+                    <div class="card-body">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:35px; height:35px; border-radius:8px; background:var(--bg-input); display:flex; align-items:center; justify-content:center; color:var(--cor-anuncio)">
+                                    <i class="fa-solid ${meta.icon}"></i>
+                                </div>
+                                <b style="font-size:14px;">${meta.label}</b>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size:12px; font-weight:bold;">${meta.atual} / ${meta.meta}</span>
+                                <i class="fa-solid fa-trash" style="color: var(--cor-perigo); cursor: pointer; font-size: 12px;" onclick="excluirMeta('${meta.id}')" title="Excluir Meta"></i>
+                            </div>
+                        </div>
+                        
+                        <div style="width:100%; height:8px; background:var(--bg-input); border-radius:4px; overflow:hidden; margin-bottom:20px;">
+                            <div style="width:${pct}%; height:100%; background:${isConcluido ? 'var(--cor-primaria)' : 'var(--cor-anuncio)'}; transition:width 0.3s ease;"></div>
+                        </div>
+
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-outline" style="flex:1" onclick="atualizarProgressoMeta('${meta.id}', -1)">-</button>
+                            <button class="btn btn-primary" style="flex:2; background:${isConcluido ? 'var(--cor-primaria)' : ''}" onclick="atualizarProgressoMeta('${meta.id}', 1)">
+                                ${isConcluido ? '✅ Concluído' : 'Marcar +1'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function atualizarProgressoMeta(id, qtd) {
+        const meta = metasData.itens.find(m => m.id === id);
+        if (meta) {
+            meta.atual = Math.max(0, meta.atual + qtd);
+            localStorage.setItem('dealer_metas', JSON.stringify(metasData));
+            renderMetas();
+        }
+    }
+
+    function configurarMetas() {
+        metasData.itens.forEach(meta => {
+            const novaMeta = prompt(`Defina a meta diária para: ${meta.label}`, meta.meta);
+            if (novaMeta !== null) {
+                meta.meta = parseInt(novaMeta) || 1;
+            }
+        });
+        localStorage.setItem('dealer_metas', JSON.stringify(metasData));
+        renderMetas();
+    }
+
+    function adicionarMeta() {
+        const label = prompt("Qual o nome da nova meta?");
+        if (!label) return;
+        const metaQtd = parseInt(prompt(`Quantas vezes você precisa realizar "${label}" por dia?`, "5"));
+        if (isNaN(metaQtd) || metaQtd <= 0) return;
+
+        const nova = {
+            id: 'm' + Date.now(),
+            label: label,
+            meta: metaQtd,
+            atual: 0,
+            icon: 'fa-star'
+        };
+        metasData.itens.push(nova);
+        localStorage.setItem('dealer_metas', JSON.stringify(metasData));
+        renderMetas();
+    }
+
+    function excluirMeta(id) {
+        if (confirm("Deseja realmente excluir esta meta?")) {
+            metasData.itens = metasData.itens.filter(m => m.id !== id);
+            localStorage.setItem('dealer_metas', JSON.stringify(metasData));
+            renderMetas();
+        }
+    }
+
+    render();
+</script>
+</body>
+</html>
