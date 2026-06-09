@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rocha Select - Gestão & Anúncios</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/cXowUxZ.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* --- ESTILOS DO RECIBO DE VENDA --- */
@@ -513,6 +516,12 @@ header {
         .modal-content { background: var(--bg-card); padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; border: 1px solid var(--borda); max-height: 90vh; overflow-y: auto; }
         #texto-gerado, .calc-results { background: var(--bg-input); padding: 15px; border-radius: 8px; margin: 15px 0; white-space: pre-wrap; font-size: 14px; border: 1px solid var(--borda); }
         
+        .responsive-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
         .calc-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--borda); }
 
         @media print {
@@ -527,6 +536,11 @@ header {
             .print-price { font-size: 55px; color: black; font-weight: bold; text-align: center; margin: 30px 0; background: #eee; padding: 15px; border-radius: 10px; }
             .print-details { font-size: 22px; line-height: 2.5; }
             .print-details span { font-weight: bold; }
+        }
+        @media (max-width: 480px) {
+            .responsive-grid {
+                grid-template-columns: 1fr !important;
+            }
         }
         .print-view { display: none; }
     </style>
@@ -899,7 +913,7 @@ header {
         <!-- INTEGRAÇÃO FIPE -->
         <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid var(--cor-compra);">
             <label style="font-weight: bold; font-size: 12px; color: var(--cor-compra); display: block; margin-bottom: 10px;">🔍 CONSULTAR TABELA FIPE (OPCIONAL)</label>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="responsive-grid">
                 <select id="fipe-tipo" onchange="loadFipeBrands()" style="height: 35px; font-size: 12px; padding: 5px;">
                     <option value="motos">🏍️ Motos</option>
                     <option value="carros">🚗 Carros</option>
@@ -908,7 +922,7 @@ header {
                     <option value="">Selecione a Marca</option>
                 </select>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <div class="responsive-grid" style="margin-top: 10px;">
                 <select id="fipe-modelo" onchange="loadFipeYears()" style="height: 35px; font-size: 12px; padding: 5px;">
                     <option value="">Selecione o Modelo</option>
                 </select>
@@ -924,7 +938,7 @@ header {
             <canvas id="fipeGraph"></canvas>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div class="responsive-grid" style="margin-top: 15px; gap: 15px;">
             <div class="form-group">
                 <label>Modelo do Veículo</label>
                 <input type="text" id="av-modelo" placeholder="Ex: CG 160 Fan">
@@ -937,7 +951,7 @@ header {
         
         <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
             <label style="font-weight: bold; font-size: 12px; color: var(--cor-compra);">📋 CHECKLIST DE DESCONTOS (O que precisa fazer?)</label>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <div class="responsive-grid" style="margin-top: 10px;">
                 <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="500"> Pintura/Tanque (~500)</label>
                 <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="800"> Pneus Novos (~800)</label>
                 <label style="font-size: 12px;"><input type="checkbox" class="check-av" data-valor="400"> Revisão Mecânica (~400)</label>
@@ -2423,6 +2437,13 @@ function confirmarVendaAvancada() {
     }
 
     render();
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('Service Worker não registrado:', err));
+        });
+    }
 </script>
 </body>
 </html>
