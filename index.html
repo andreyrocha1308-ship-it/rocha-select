@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#059669">
-    <link rel="apple-touch-icon" href="https://i.imgur.com/cXowUxZ.png">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/qLZQVQwW/blob.jpg">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -621,6 +621,7 @@ header {
             <button class="tab-btn" id="tab-leads" onclick="switchTab('leads')">👤 Leads/Contatos</button>
             <button class="tab-btn" id="tab-compras" onclick="switchTab('compras')">🛒 Avaliador/Compras</button>
             <button class="tab-btn" id="tab-metas" onclick="switchTab('metas')">🚀 Metas do Dia</button>
+            <button class="tab-btn" id="tab-financeiro" onclick="switchTab('financeiro')">💰 Financeiro</button>
             <button type="button" class="btn btn-primary" style="padding: 10px 15px; font-size: 13px; border-radius: 8px;" onclick="abrirFormPopup()"><i class="fa-solid fa-plus"></i> Novo Produto</button>
             <div style="border-left: 1px solid var(--borda); margin-left: 5px; padding-left: 10px; display: flex; gap: 5px;">
                 <a href="https://business.facebook.com/latest/inbox/all" target="_blank" class="btn btn-outline" style="padding: 8px; color: #1877f2;" title="Inbox Facebook/Insta"><i class="fa-brands fa-facebook-messenger"></i></a>
@@ -638,7 +639,8 @@ header {
                 <div class="metric-card"><span>Lucro Previsto</span><h2 id="m-lucro" style="color: var(--cor-primaria);">R$ 0</h2></div>
                 <div class="metric-card"><span>Valor Girado (Vendido)</span><h2 id="m-girado" style="color: #a855f7;">R$ 0</h2></div>
                 <div class="metric-card"><span>ROI Médio</span><h2 id="m-markup" style="color: #0ea5e9;">0%</h2></div>
-                <div class="metric-card" onclick="configurarCustos()" style="cursor:pointer; border: 1px dashed var(--cor-primaria);" title="Clique para configurar despesas"><span>Lucro Líquido (Mês) <i class="fa-solid fa-gear" style="font-size:10px"></i></span><h2 id="m-liquido" style="color: var(--cor-primaria);">R$ 0</h2></div>
+                <!-- O card de configuração de custos foi substituído pela aba Financeiro -->
+                <div class="metric-card" onclick="switchTab('financeiro')" style="cursor:pointer; border: 1px dashed var(--cor-primaria);" title="Ver despesas detalhadas"><span>Lucro Líquido (Mês) <i class="fa-solid fa-chevron-right" style="font-size:10px"></i></span><h2 id="m-liquido" style="color: var(--cor-primaria);">R$ 0</h2></div>
                 <div class="metric-card"><span>Conversão Leads</span><h2 id="m-conversao" style="color: #f43f5e;">0%</h2></div>
                 <div class="metric-card"><span>Ticket Médio (Lucro)</span><h2 id="m-ticket" style="color: #8b5cf6;">R$ 0</h2></div>
                 <div class="metric-card"><span>Melhor Canal</span><h2 id="m-canal" style="color: #25d366; font-size: 18px !important;">---</h2></div>
@@ -660,6 +662,11 @@ header {
                 <div class="chart-card">
                     <h3><i class="fa-solid fa-chart-bar"></i> Giro de Estoque (Dias no Pátio)</h3>
                     <div class="chart-container"><canvas id="chartGiroEstoque"></canvas></div>
+                </div>
+                <!-- NEW: Chart for Lost Lead Reasons (Ideia 5) -->
+                <div class="chart-card">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Motivos de Perda de Lead</h3>
+                    <div class="chart-container"><canvas id="chartMotivosPerda"></canvas></div>
                 </div>
             </div>
         </div>
@@ -768,6 +775,16 @@ header {
                     </div>
                 </div>
 
+                <div style="margin-bottom: 20px; padding: 12px; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--borda);">
+                    <label style="font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block; color: var(--cor-alerta);">📂 STATUS DOCUMENTAÇÃO</label>
+                    <select id="doc-transfer-status" style="width: 100%; padding: 8px; border-radius: 6px; font-size: 13px; background: var(--bg-principal); color: var(--texto-p); border: 1px solid var(--borda);">
+                        <option value="Pendente">⏳ Aguardando Documento</option>
+                        <option value="No Cartório">✍️ No Cartório / Assinatura</option>
+                        <option value="Comunicado">📡 Venda Comunicada</option>
+                        <option value="Concluído">✅ Transferência Concluída</option>
+                    </select>
+                </div>
+
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <button type="submit" id="btn-submit" class="btn btn-primary">Salvar no Inventário</button>
                     <button type="button" id="btn-cancel-edit" class="btn btn-outline hidden" onclick="resetForm()">Cancelar</button>
@@ -835,6 +852,21 @@ header {
             </div>
             <div id="container-metas" class="inventory-grid"></div>
         </div>
+
+        <div id="view-financeiro" class="hidden">
+            <div class="controls-bar" style="justify-content: space-between; display: flex; align-items: center;">
+                <h3 style="margin:0">💰 Gestão de Despesas Fixas / Operacionais</h3>
+            </div>
+            <div style="background: var(--bg-card); padding: 20px; border-radius: 16px; border: 1px solid var(--borda); margin-bottom: 20px;">
+                <div class="responsive-grid" style="gap: 15px; align-items: flex-end;">
+                    <div class="form-group"><label>Descrição da Despesa</label><input type="text" id="fin-desc" placeholder="Ex: Aluguel ou Facebook Ads"></div>
+                    <div class="form-group"><label>Valor (R$)</label><input type="number" id="fin-valor" placeholder="0.00"></div>
+                    <div class="form-group"><label>Data</label><input type="date" id="fin-data"></div>
+                    <button class="btn btn-primary" style="height: 45px; margin-bottom: 15px;" onclick="adicionarDespesaGeral()">Adicionar Lançamento</button>
+                </div>
+            </div>
+            <div id="lista-despesas-gerais" class="inventory-grid"></div>
+        </div>
     </div>
 </div>
 
@@ -899,6 +931,22 @@ header {
             <input type="text" id="comprador-whats" placeholder="Ex: 11999998888">
         </div>
         
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>CPF (Opcional)</label>
+                <input type="text" id="comprador-cpf" placeholder="000.000.000-00">
+            </div>
+            <div class="form-group">
+                <label>RG (Opcional)</label>
+                <input type="text" id="comprador-rg" placeholder="00.000.000-0">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Endereço Completo (Opcional)</label>
+            <input type="text" id="comprador-endereco" placeholder="Rua, Número, Bairro, Cidade - UF">
+        </div>
+
         <div class="form-group">
             <label>Forma de Pagamento</label>
             <select id="venda-pagamento">
@@ -926,6 +974,10 @@ header {
         <div class="form-group">
             <label>WhatsApp</label>
             <input type="text" id="lead-whats" placeholder="11 99999-9999">
+        </div>
+        <div class="form-group">
+            <label>Última Conversa / Notas</label>
+            <textarea id="lead-notas" rows="3" placeholder="Ex: Cliente tem interesse em trocar por uma CG mais nova..." style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--borda); border-radius: 8px; color: var(--texto-p);"></textarea>
         </div>
         <div class="form-row-2">
             <div class="form-group">
@@ -962,9 +1014,34 @@ header {
         </div>
     </div>
 </div>
+
+<!-- NEW: Modal for Lost Lead Reason (Ideia 5) -->
+<div id="modal-motivo-perda" class="modal">
+    <div class="modal-content">
+        <h3>❌ Motivo da Perda do Lead</h3>
+        <input type="hidden" id="lead-perdido-id">
+        <div class="form-group">
+            <label>Qual o principal motivo pelo qual o cliente não fechou?</label>
+            <select id="motivo-perda-select" onchange="toggleMotivoPerdaOutro()">
+                <option value="">Selecione um motivo...</option>
+                <option value="Preço do veículo">Preço do veículo</option>
+                <option value="Não aprovou financiamento">Não aprovou financiamento</option>
+                <option value="Comprou em outro lugar">Comprou em outro lugar</option>
+                <option value="Desistiu da compra">Desistiu da compra</option>
+                <option value="Condição do veículo">Condição do veículo (não atendeu)</option>
+                <option value="Outro">Outro (especificar)</option>
+            </select>
+            <textarea id="motivo-perda-outro" rows="2" placeholder="Especifique o motivo..." style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--borda); border-radius: 8px; color: var(--texto-p); margin-top: 10px; display: none;"></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-primary" onclick="confirmarMotivoPerda()">Confirmar</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-motivo-perda')">Cancelar</button>
+        </div>
+    </div>
+</div>
 <div id="modal-avaliacao" class="modal">
     <div class="modal-content" style="max-width: min(90vw, 600px);">
-        <h3>🛒 Calculadora de Compra Lucrativa</h3>
+        <h3>🛒 Avaliação de Veículo (Compra ou Troca)</h3>
         
         <!-- INTEGRAÇÃO FIPE -->
         <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid var(--cor-compra);">
@@ -1003,6 +1080,10 @@ header {
                 <label>Valor de Mercado (Venda)</label>
                 <input type="number" id="av-mercado" oninput="calcularSugestaoCompra()" placeholder="R$">
             </div>
+            <div class="form-group">
+                <label>Preço Desejado pelo Cliente (Troca)</label>
+                <input type="number" id="av-preco-cliente" oninput="calcularSugestaoCompra()" placeholder="R$ 0.00">
+            </div>
         </div>
         
         <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -1025,6 +1106,7 @@ header {
             <span style="font-size: 12px; opacity: 0.9; text-transform: uppercase;">Oferta Máxima Sugerida</span>
             <h2 id="av-oferta-maxima" style="font-size: 32px; margin: 5px 0;">R$ 0</h2>
             <p id="av-lucro-estimado" style="font-size: 12px; opacity: 0.9;">Lucro previsto: R$ 0</p>
+            <p id="av-diferenca-cliente" style="font-size: 14px; opacity: 0.9; font-weight: bold; margin-top: 10px;"></p>
         </div>
 
         <div style="display: flex; gap: 10px;">
@@ -1153,13 +1235,8 @@ header {
         const textArea = document.getElementById('foto-url');
         if (!files || files.length === 0) return;
         
-        // Obtém a chave do ImgBB do localStorage ou solicita uma nova
-        let apiKey = localStorage.getItem('imgbb_api_key');
-        if (!apiKey) {
-            apiKey = prompt("Para enviar fotos, você precisa de uma chave do ImgBB.\n1. Crie uma conta gratuita em api.imgbb.com\n2. Copie a chave (API Key) e cole aqui:");
-            if (apiKey) localStorage.setItem('imgbb_api_key', apiKey.trim());
-            else return;
-        }
+        // Chave do ImgBB configurada diretamente
+        const apiKey = "e12036910ca5033bee92b7f0dbd115b0";
 
         status.innerText = `⏳ Iniciando upload de ${files.length} item(s)...`;
 
@@ -1253,6 +1330,7 @@ header {
                             ${item.cor ? `<div style="display:flex; justify-content:space-between"><span>Cor:</span> <b style="color:var(--texto-p)">${item.cor}</b></div>` : ''}
                             <div style="display:flex; justify-content:space-between"><span>Tempo:</span> <b>${labelTempo}</b></div>
                             ${custoPatioHtml}
+                            <div style="display:flex; justify-content:space-between; margin-top:5px;"><span style="color:var(--cor-alerta)">Papelada:</span> <b>${item.docs?.transferStatus || 'Pendente'}</b></div>
                             <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
                                 ${item.docs?.crv ? '<span class="doc-tag">📝 CRV</span>' : ''}
                                 ${item.docs?.manual ? '<span class="doc-tag">📖 Manual</span>' : ''}
@@ -1273,6 +1351,7 @@ header {
                         <button class="btn btn-primary" onclick="gerarCardWhatsApp(${item.id})" title="Gerar Card Imagem" style="background: #25d366; color: white;"><i class="fa-brands fa-whatsapp"></i> Card</button>
                         <button class="btn btn-primary" onclick="gerarCardInstagram(${item.id})" title="Gerar Card Instagram" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white;"><i class="fa-brands fa-instagram"></i> Feed</button>
                         <button class="btn btn-outline" onclick="vender(${item.id})">${item.status === 'Vendido' ? 'Voltar' : 'Vendido'}</button>
+                        ${item.status === 'Vendido' ? `<button class="btn btn-primary" onclick="gerarContratoPDF(${item.id})" style="background:var(--cor-anuncio)"><i class="fa-solid fa-file-contract"></i> Contrato</button>` : ''}
                         <button class="btn btn-outline" style="color:var(--cor-alerta)" onclick="editar(${item.id})"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn btn-outline" style="color:var(--cor-perigo)" onclick="excluir(${item.id})"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -1449,6 +1528,7 @@ function atualizarListaOficinaInterface() {
     let db = JSON.parse(localStorage.getItem('dealer_v3')) || [];
     let leads = JSON.parse(localStorage.getItem('dealer_leads')) || [];
     let avaliacoes = JSON.parse(localStorage.getItem('dealer_avaliacoes')) || [];
+    let despesasGerais = JSON.parse(localStorage.getItem('dealer_despesas')) || [];
     let metasData = JSON.parse(localStorage.getItem('dealer_metas')) || { data: "", itens: getDefaultMetas() };
     let currentTab = 'dashboard'; // Default to dashboard
     let fipeChart = null;
@@ -1457,6 +1537,8 @@ function atualizarListaOficinaInterface() {
     let chartLucroMensalInstance = null;
     let chartLucroCanalInstance = null;
     let chartGiroEstoqueInstance = null;
+    let chartMotivosPerdaInstance = null; // NEW: for Ideia 5
+    let tempLeadToSave = null; // Global para gerenciar a perda de lead
 
     function toggleMenu() {
         document.querySelector('.tabs').classList.toggle('active');
@@ -1467,6 +1549,121 @@ function atualizarListaOficinaInterface() {
         localStorage.setItem('dealer_theme', isDark ? 'dark' : 'light');
         updateThemeIcon();
         render(); // Recria os gráficos para aplicar as novas cores do tema
+    }
+
+    // --- GERAÇÃO DE CONTRATO DE COMPRA E VENDA EM PDF ---
+    function gerarContratoPDF(id) {
+        const item = db.find(x => x.id === id);
+        if (!item || !item.comprador) {
+            alert("Dados da venda não encontrados para gerar o contrato.");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const margem = 20;
+        let y = 30;
+
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text("CONTRATO DE COMPRA E VENDA DE VEÍCULO", 105, y, { align: 'center' });
+        
+        y += 20;
+        doc.setFontSize(11);
+        doc.text("VENDEDOR: ROCHA SELECT - GESTÃO DE VEÍCULOS & PEÇAS", margem, y);
+        
+        y += 10;
+        doc.text("COMPRADOR:", margem, y);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Nome: ${item.comprador.nome}`, margem, y + 5);
+        doc.text(`CPF: ${item.comprador.cpf || '____________________'}`, margem, y + 10);
+        doc.text(`RG: ${item.comprador.rg || '____________________'}`, 110, y + 10);
+        doc.text(`Endereço: ${item.comprador.endereco || '____________________________________________________'}`, margem, y + 15);
+
+        y += 30;
+        doc.setFont(undefined, 'bold');
+        doc.text("OBJETO DO CONTRATO:", margem, y);
+        doc.setFont(undefined, 'normal');
+        const descVeiculo = `Veículo ${item.mod}, Ano ${item.ano || '---'}, Cor ${item.cor || '---'}, KM ${item.km ? parseInt(item.km).toLocaleString('pt-BR') : '---'}.`;
+        doc.text(descVeiculo, margem, y + 5);
+
+        y += 20;
+        doc.setFont(undefined, 'bold');
+        doc.text("VALOR E FORMA DE PAGAMENTO:", margem, y);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Valor Total: R$ ${item.venda.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, margem, y + 5);
+        doc.text(`Forma de Pagamento acordada: ${item.comprador.pagamento}`, margem, y + 10);
+
+        y += 25;
+        doc.setFont(undefined, 'bold');
+        doc.text("CLÁUSULAS:", margem, y);
+        doc.setFont(undefined, 'normal');
+        const clausulas = "1. O Vendedor transfere ao Comprador a propriedade do veículo acima descrito.\n2. O Comprador declara ter vistoriado o veículo e aceitá-lo no estado em que se encontra.\n3. A partir desta data, toda responsabilidade civil, criminal e administrativa (multas e impostos) passa a ser exclusivamente do Comprador.\n4. O Vendedor se compromete a entregar a documentação necessária para transferência em até 30 dias.";
+        const textLines = doc.splitTextToSize(clausulas, 170);
+        doc.text(textLines, margem, y + 7);
+
+        y += 50;
+        const dataAtual = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Local e Data: ______________________, ${dataAtual}`, margem, y);
+        
+        y += 30;
+        doc.line(margem, y, 90, y);
+        doc.line(120, y, 190, y);
+        doc.text("ROCHA SELECT", 55, y + 5, { align: 'center' });
+        doc.text(item.comprador.nome.toUpperCase(), 155, y + 5, { align: 'center' });
+
+        doc.save(`Contrato_Venda_${item.mod.replace(/\s+/g, '_')}.pdf`);
+    }
+
+    // --- FUNÇÕES PARA GERAÇÃO DE RELATÓRIO PDF ---
+    async function generateFullReport() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const btn = document.querySelector('button[onclick="generateFullReport()"]');
+        const originalText = btn.innerHTML;
+        const isDark = document.body.classList.contains('dark-mode');
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+        btn.disabled = true;
+
+        try {
+            const sections = [
+                { id: 'view-dashboard', title: 'Dashboard de Performance' },
+                { id: 'view-metas', title: 'Checklist de Metas' },
+                { id: 'view-estoque', title: 'Inventário Geral' }
+            ];
+
+            for (let i = 0; i < sections.length; i++) {
+                const section = sections[i];
+                const el = document.getElementById(section.id);
+                const wasHidden = el.classList.contains('hidden');
+                
+                if (wasHidden) el.classList.remove('hidden');
+                const canvas = await html2canvas(el, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: isDark ? '#0f172a' : '#f8fafc'
+                });
+                if (wasHidden) el.classList.add('hidden');
+
+                if (i > 0) doc.addPage();
+                doc.setFontSize(18);
+                doc.setTextColor(isDark ? 16 : 5, isDark ? 185 : 150, isDark ? 129 : 105);
+                doc.text(section.title, 10, 20);
+                
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 190;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                doc.addImage(imgData, 'PNG', 10, 30, imgWidth, imgHeight);
+            }
+            doc.save(`Relatorio_RochaSelect_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao gerar o PDF. Verifique o console.");
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 
     function updateThemeIcon() {
@@ -1494,7 +1691,7 @@ function atualizarListaOficinaInterface() {
         if (btn) btn.classList.add('active');
 
         // Toggle visibility for all main views
-        const views = ['dashboard', 'estoque', 'leads', 'compras', 'metas'];
+        const views = ['dashboard', 'estoque', 'leads', 'compras', 'metas', 'financeiro'];
         views.forEach(v => {
             const el = document.getElementById(`view-${v}`);
             if (el) el.classList.toggle('hidden', v !== tab);
@@ -1532,7 +1729,8 @@ historicoOficina: [...gastosTemporariosOficina], // Salva a lista detalhada
             docs: {
                 crv: document.getElementById('doc-crv').checked,
                 manual: document.getElementById('doc-manual').checked,
-                chave: document.getElementById('doc-chave').checked
+                chave: document.getElementById('doc-chave').checked,
+                transferStatus: document.getElementById('doc-transfer-status').value
             },
             plataformas: {
                 fb: document.getElementById('check-fb').checked,
@@ -1578,6 +1776,7 @@ atualizarListaOficinaInterface();
         document.getElementById('doc-crv').checked = item.docs?.crv || false;
         document.getElementById('doc-manual').checked = item.docs?.manual || false;
         document.getElementById('doc-chave').checked = item.docs?.chave || false;
+        document.getElementById('doc-transfer-status').value = item.docs?.transferStatus || 'Pendente';
         document.getElementById('check-olx').checked = item.plataformas.olx;
         document.getElementById('check-ins').checked = item.plataformas.ins;
         document.getElementById('tipo-negocio').value = item.tipoNegocio || 'Proprio';
@@ -1623,6 +1822,8 @@ toggleTipoNegocio('Proprio');
             renderAvaliacoes();
         } else if (currentTab === 'metas') {
             renderMetas();
+        } else if (currentTab === 'financeiro') {
+            renderFinanceiro();
         }
     }
 
@@ -1636,6 +1837,11 @@ toggleTipoNegocio('Proprio');
         const hoje = new Date();
         const mesAtual = hoje.getMonth();
         const anoAtual = hoje.getFullYear();
+        const mesAtualKey = `${anoAtual}-${(mesAtual + 1).toString().padStart(2, '0')}`;
+
+        const custosFixosMes = despesasGerais
+            .filter(d => d.data.startsWith(mesAtualKey))
+            .reduce((acc, d) => acc + d.valor, 0);
 
 db.forEach(item => {
     const custoOficina = parseFloat(item.prep) || 0;
@@ -1693,6 +1899,7 @@ db.forEach(item => {
         const currentMonthKey = `${anoAtual}-${(mesAtual + 1).toString().padStart(2, '0')}`;
         if (lucroMensalHistorico[currentMonthKey]) {
             mLucroMensalAtual = lucroMensalHistorico[currentMonthKey] - custosFixos;
+            mLucroMensalAtual = lucroMensalHistorico[currentMonthKey] - custosFixosMes;
         }
 
         document.getElementById('m-estoque').innerText = mEstoque;
@@ -1710,7 +1917,7 @@ db.forEach(item => {
         document.getElementById('m-canal').innerText = melhorCanal;
 
         // Cálculo da Taxa de Conversão de Leads
-        const totalLeads = leads.length;
+        const totalLeads = leads.filter(l => l.status !== 'Perdido').length; // Only count active leads for conversion rate
         const leadsConvertidos = leads.filter(l => l.status === 'Vendido').length;
         const taxaConversao = totalLeads > 0 ? ((leadsConvertidos / totalLeads) * 100).toFixed(1) : '0';
         document.getElementById('m-conversao').innerText = taxaConversao + '%';
@@ -1719,6 +1926,13 @@ db.forEach(item => {
         renderLucroMensalChart(lucroMensalHistorico, custosFixos);
         renderLucroCanalChart(lucroPorOrigem);
         renderGiroEstoqueChart(diasNoPatioVendidos);
+
+        // NEW: Ideia 5 - Motivos de Perda de Lead
+        let motivosPerda = {};
+        leads.filter(l => l.status === 'Perdido' && l.motivoPerda).forEach(l => {
+            motivosPerda[l.motivoPerda] = (motivosPerda[l.motivoPerda] || 0) + 1;
+        });
+        renderMotivosPerdaChart(motivosPerda);
     }
 
     function renderInventory() {
@@ -1841,8 +2055,12 @@ if (!item.historicoOficina) item.historicoOficina = [];
             const monthName = d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
             const monthKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
             
+            const custosDoMes = despesasGerais
+                .filter(desp => desp.data.startsWith(monthKey))
+                .reduce((acc, desp) => acc + desp.valor, 0);
+
             labels.push(monthName);
-            let netProfit = (lucroMensalHistorico[monthKey] || 0) - custosFixos;
+            let netProfit = (lucroMensalHistorico[monthKey] || 0) - custosDoMes;
             data.push(netProfit);
             backgroundColors.push(netProfit >= 0 ? primaryColor : dangerColor);
         }
@@ -1897,11 +2115,9 @@ if (!item.historicoOficina) item.historicoOficina = [];
         const isDark = document.body.classList.contains('dark-mode');
         const textColor = isDark ? '#94a3b8' : '#64748b';
 
-        const labels = Object.keys(lucroPorOrigem).filter(key => lucroPorOrigem[key] > 0); // Only show channels with actual profit
-        const data = labels.map(key => lucroPorOrigem[key]);
-
-        // Cores para o modo claro
-        const backgroundColorsLight = [
+        const labels = Object.keys(lucroPorOrigem);
+        const data = Object.values(lucroPorOrigem);
+        const backgroundColors = [
             '#1877f2', // Facebook
             '#25d366', // WhatsApp (assuming Direct often means WhatsApp)
             '#ff5722', // OLX
@@ -1909,25 +2125,14 @@ if (!item.historicoOficina) item.historicoOficina = [];
             '#8b5cf6', // Indicação / Outros
             '#0ea5e9'  // Default for others
         ];
-        // Cores para o modo escuro (ajustadas para melhor visibilidade)
-        const backgroundColorsDark = [
-            '#3b82f6', // Facebook (mais claro)
-            '#25d366', // WhatsApp (assuming Direct often means WhatsApp)
-            '#ff5722', // OLX
-            '#c13584', // Instagram
-            '#8b5cf6', // Indicação / Outros
-            '#0ea5e9'  // Default for others
-        ];
-
-        const colorsToUse = isDark ? backgroundColorsDark : backgroundColorsLight;
 
         chartLucroCanalInstance = new Chart(ctx, {
             type: 'pie',
             data: {
                 labels: labels,
                 datasets: [{
-                    data: data, // Use the filtered data
-                    backgroundColor: colorsToUse.slice(0, labels.length),
+                    data: data,
+                    backgroundColor: backgroundColors.slice(0, labels.length),
                     hoverOffset: 4
                 }]
             },
@@ -2022,13 +2227,68 @@ if (!item.historicoOficina) item.historicoOficina = [];
         });
     }
 
+    // NEW: Ideia 5 - Chart for Lost Lead Reasons
+    function renderMotivosPerdaChart(motivosPerda) {
+        const ctx = document.getElementById('chartMotivosPerda').getContext('2d');
+        if (chartMotivosPerdaInstance) chartMotivosPerdaInstance.destroy();
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+
+        const labels = Object.keys(motivosPerda);
+        const data = Object.values(motivosPerda);
+        const backgroundColors = [
+            '#ef4444', // Red
+            '#f97316', // Orange
+            '#eab308', // Yellow
+            '#84cc16', // Green
+            '#3b82f6', // Blue
+            '#a855f7', // Purple
+            '#ec4899', // Pink
+            '#64748b'  // Gray for 'Outro'
+        ];
+
+        chartMotivosPerdaInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColors.slice(0, labels.length),
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: textColor }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) label += `${context.parsed} leads`;
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     // --- SISTEMA DE COMPRAS E AVALIAÇÕES ---
     function abrirModalAvaliacao() {
         document.getElementById('av-modelo').value = '';
         document.getElementById('av-mercado').value = '';
         document.getElementById('av-outros-gastos').value = '';
+        document.getElementById('av-preco-cliente').value = ''; // Clear new field
         
         // Reseta selects da FIPE
+        document.getElementById('fipe-tipo').value = 'motos'; // Reset to default
         document.getElementById('fipe-marca').innerHTML = '<option value="">Selecione a Marca</option>';
         document.getElementById('fipe-modelo').innerHTML = '<option value="">Selecione o Modelo</option>';
         document.getElementById('fipe-ano').innerHTML = '<option value="">Selecione o Ano</option>';
@@ -2036,7 +2296,7 @@ if (!item.historicoOficina) item.historicoOficina = [];
         if (fipeChart) fipeChart.destroy();
         document.getElementById('fipe-graph-container').style.display = 'none';
         
-        loadFipeBrands();
+        loadFipeBrands(); // Reload brands for default type
 
         document.querySelectorAll('.check-av').forEach(c => c.checked = false);
         calcularSugestaoCompra();
@@ -2182,6 +2442,7 @@ if (!item.historicoOficina) item.historicoOficina = [];
         const vMercado = parseFloat(document.getElementById('av-mercado').value) || 0;
         const margemPct = (parseFloat(document.getElementById('av-margem').value) || 0) / 100;
         let gastos = parseFloat(document.getElementById('av-outros-gastos').value) || 0;
+        const precoCliente = parseFloat(document.getElementById('av-preco-cliente').value) || 0; // New field
 
         document.querySelectorAll('.check-av:checked').forEach(c => {
             gastos += parseFloat(c.dataset.valor);
@@ -2193,7 +2454,22 @@ if (!item.historicoOficina) item.historicoOficina = [];
         const lucroPrevisto = vMercado - (ofertaMaxima + gastos);
 
         document.getElementById('av-oferta-maxima').innerText = `R$ ${Math.max(0, ofertaMaxima).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        document.getElementById('av-lucro-estimado').innerText = `Lucro previsto: R$ ${Math.max(0, lucroPrevisto).toLocaleString('pt-BR', {minimumFractionDigits: 2})} | Gastos: R$ ${gastos}`;
+        document.getElementById('av-lucro-estimado').innerText = `Lucro previsto: R$ ${Math.max(0, lucroPrevisto).toLocaleString('pt-BR', {minimumFractionDigits: 2})} | Gastos: R$ ${gastos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        // Display difference with customer's desired price
+        const diferencaClienteEl = document.getElementById('av-diferenca-cliente');
+        if (precoCliente > 0) {
+            const diferenca = ofertaMaxima - precoCliente;
+            if (diferenca >= 0) {
+                diferencaClienteEl.style.color = 'var(--cor-primaria)';
+                diferencaClienteEl.innerText = `Você pode oferecer R$ ${diferenca.toLocaleString('pt-BR', {minimumFractionDigits: 2})} A MAIS que o cliente pede.`;
+            } else {
+                diferencaClienteEl.style.color = 'var(--cor-perigo)';
+                diferencaClienteEl.innerText = `O cliente pede R$ ${Math.abs(diferenca).toLocaleString('pt-BR', {minimumFractionDigits: 2})} A MAIS que sua oferta máxima.`;
+            }
+        } else {
+            diferencaClienteEl.innerText = '';
+        }
     }
 
     function salvarAvaliacao() {
@@ -2201,7 +2477,8 @@ if (!item.historicoOficina) item.historicoOficina = [];
             id: Date.now(),
             modelo: document.getElementById('av-modelo').value || 'Sem Nome',
             valorMercado: parseFloat(document.getElementById('av-mercado').value) || 0,
-            oferta: parseFloat(document.getElementById('av-oferta-maxima').innerText.replace('R$ ','').replace('.','').replace(',','.')) || 0,
+            precoCliente: parseFloat(document.getElementById('av-preco-cliente').value) || 0, // New field
+            oferta: parseFloat(document.getElementById('av-oferta-maxima').innerText.replace('R$ ', '').replace(/\./g, '').replace(',', '.')) || 0,
             data: new Date().toLocaleDateString('pt-BR')
         };
         avaliacoes.push(av);
@@ -2216,6 +2493,11 @@ if (!item.historicoOficina) item.historicoOficina = [];
         container.innerHTML = '';
 
         avaliacoes.forEach(av => {
+            let precoClienteHtml = '';
+            if (av.precoCliente > 0) {
+                precoClienteHtml = `<div style="font-size: 13px; color: var(--texto-s)">Cliente pede: R$ ${av.precoCliente.toLocaleString('pt-BR')}</div>`;
+            }
+
             container.innerHTML += `
                 <div class="card" style="border-left: 4px solid var(--cor-compra)">
                     <div class="card-body">
@@ -2225,6 +2507,7 @@ if (!item.historicoOficina) item.historicoOficina = [];
                         </div>
                         <h3 style="margin:10px 0">${av.modelo}</h3>
                         <div style="font-size: 13px; color: var(--texto-s)">Mercado: R$ ${av.valorMercado.toLocaleString('pt-BR')}</div>
+                        ${precoClienteHtml} <!-- Display new field -->
                         <div style="font-size: 18px; font-weight: bold; color: var(--cor-compra); margin: 5px 0;">
                             Oferta: R$ ${av.oferta.toLocaleString('pt-BR')}
                         </div>
@@ -2246,6 +2529,7 @@ if (!item.historicoOficina) item.historicoOficina = [];
         document.getElementById('modelo').value = av.modelo;
         document.getElementById('v-compra').value = av.oferta;
         document.getElementById('v-venda').value = av.valorMercado;
+        // No direct field for precoCliente in the main form, but it's part of the evaluation record.
         
         // Remove da lista de avaliações após converter
         avaliacoes = avaliacoes.filter(x => x.id !== id);
@@ -2312,6 +2596,8 @@ if (!item.historicoOficina) item.historicoOficina = [];
                             <b>Interesse:</b> ${veiculo ? veiculo.mod : 'Veículo não encontrado'}
                         </div>
                         <div class="card-footer" style="gap: 4px;">
+                            <button class="btn btn-outline" style="color:var(--cor-alerta)" onclick="editarLead(${lead.id})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn btn-outline" style="color:var(--cor-perigo)" onclick="excluirLead(${lead.id})" title="Excluir"><i class="fa-solid fa-trash"></i></button>
                             <button class="btn btn-outline" style="color:var(--cor-perigo)" onclick="excluirLead(${lead.id})"><i class="fa-solid fa-trash"></i></button>
                             <button class="btn btn-outline" style="font-size: 11px; flex: 1;" onclick="enviarMensagemRapida('${lead.whats}', 'visita', '${veiculo?.mod}')">📅 Visita</button>
                             <button class="btn btn-outline" style="font-size: 11px; flex: 1;" onclick="enviarMensagemRapida('${lead.whats}', 'fotos', '${veiculo?.mod}')">📸 Fotos</button>
@@ -2338,34 +2624,137 @@ if (!item.historicoOficina) item.historicoOficina = [];
         document.getElementById('lead-id').value = '';
         document.getElementById('lead-nome').value = '';
         document.getElementById('lead-whats').value = '';
+        document.getElementById('lead-notas').value = '';
         document.getElementById('lead-followup').value = '';
+        document.getElementById('lead-status').value = 'Novo';
         document.getElementById('lead-origem').value = 'Facebook';
+        document.querySelector('#modal-lead h3').innerText = '🎯 Registrar Interessado';
         const select = document.getElementById('lead-veiculo');
         select.innerHTML = db.map(v => `<option value="${v.id}" ${v.id == veiculoId ? 'selected' : ''}>${v.mod}</option>`).join('');
         document.getElementById('modal-lead').style.display = 'flex';
     }
 
-    function configurarCustos() {
-        const atual = localStorage.getItem('dealer_custos_fixos') || 0;
-        const valor = prompt("Custos Fixos Mensais (Aluguel, Luz, Marketing, Pro-labore):", atual);
-        if (valor !== null) {
-            localStorage.setItem('dealer_custos_fixos', valor);
-            render();
+    function renderFinanceiro() {
+        localStorage.setItem('dealer_despesas', JSON.stringify(despesasGerais));
+        const lista = document.getElementById('lista-despesas-gerais');
+        if(!lista) return;
+        lista.innerHTML = '';
+        document.getElementById('fin-data').value = new Date().toISOString().split('T')[0];
+
+        despesasGerais.sort((a,b) => new Date(b.data) - new Date(a.data)).forEach(desp => {
+            lista.innerHTML += `
+                <div class="card" style="border-left: 4px solid var(--cor-perigo)">
+                    <div class="card-body">
+                        <div style="display:flex; justify-content:space-between">
+                            <span class="status-tag" style="background:rgba(225,29,72,0.1); color:var(--cor-perigo)">DESPESA</span>
+                            <small style="color:var(--texto-s)">${new Date(desp.data + 'T12:00:00').toLocaleDateString('pt-BR')}</small>
+                        </div>
+                        <h3 style="margin:10px 0">${desp.desc}</h3>
+                        <div style="font-size: 20px; font-weight: bold; color: var(--texto-p);">R$ ${desp.valor.toLocaleString('pt-BR')}</div>
+                        <div class="card-footer">
+                            <button class="btn btn-outline" style="color:var(--cor-perigo); width: 100%" onclick="excluirDespesa(${desp.id})"><i class="fa-solid fa-trash"></i> Excluir</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function adicionarDespesaGeral() {
+        const desc = document.getElementById('fin-desc').value;
+        const valor = parseFloat(document.getElementById('fin-valor').value);
+        const data = document.getElementById('fin-data').value;
+
+        if(!desc || !valor || !data) { alert("Preencha todos os campos da despesa."); return; }
+
+        despesasGerais.push({ id: Date.now(), desc, valor, data });
+        document.getElementById('fin-desc').value = '';
+        document.getElementById('fin-valor').value = '';
+        renderFinanceiro();
+    }
+
+    function excluirDespesa(id) {
+        if(confirm("Excluir este lançamento financeiro?")) {
+            despesasGerais = despesasGerais.filter(d => d.id !== id);
+            renderFinanceiro();
         }
     }
 
     function salvarLead() {
-        const novo = {
-            id: Date.now(),
+        const leadId = document.getElementById('lead-id').value;
+        const status = document.getElementById('lead-status').value;
+        
+        const leadData = {
+            id: leadId ? parseInt(leadId) : Date.now(),
             nome: document.getElementById('lead-nome').value,
             whats: document.getElementById('lead-whats').value,
             veiculoId: document.getElementById('lead-veiculo').value,
             origem: document.getElementById('lead-origem').value,
             followup: document.getElementById('lead-followup').value,
-            status: document.getElementById('lead-status').value,
-            data: new Date().toLocaleDateString('pt-BR')
+            notas: document.getElementById('lead-notas').value,
+            status: status,
+            data: new Date().toLocaleDateString('pt-BR'),
+            motivoPerda: ''
         };
-        leads.push(novo);
+
+        if (status === 'Perdido') {
+            tempLeadToSave = leadData;
+            document.getElementById('modal-motivo-perda').style.display = 'flex';
+            document.getElementById('motivo-perda-select').value = '';
+            document.getElementById('motivo-perda-outro').value = '';
+            document.getElementById('motivo-perda-outro').style.display = 'none';
+            return;
+        }
+
+        const idx = leads.findIndex(l => l.id == leadData.id);
+        if (idx !== -1) {
+            leadData.data = leads[idx].data; // Preserva a data original
+            leads[idx] = leadData;
+        } else {
+            leads.push(leadData);
+        }
+        
+        closeModal('modal-lead');
+        render();
+    }
+
+    function editarLead(id) {
+        const lead = leads.find(l => l.id == id);
+        if (!lead) return;
+
+        abrirModalLead(lead.veiculoId);
+        document.getElementById('lead-id').value = lead.id;
+        document.getElementById('lead-nome').value = lead.nome;
+        document.getElementById('lead-whats').value = lead.whats;
+        document.getElementById('lead-notas').value = lead.notas;
+        document.getElementById('lead-origem').value = lead.origem;
+        document.getElementById('lead-followup').value = lead.followup;
+        document.getElementById('lead-status').value = lead.status;
+        
+        document.querySelector('#modal-lead h3').innerText = '🎯 Editar Interessado';
+    }
+
+    function toggleMotivoPerdaOutro() {
+        const select = document.getElementById('motivo-perda-select');
+        const outro = document.getElementById('motivo-perda-outro');
+        outro.style.display = select.value === 'Outro' ? 'block' : 'none';
+    }
+
+    function confirmarMotivoPerda() {
+        const select = document.getElementById('motivo-perda-select');
+        const outro = document.getElementById('motivo-perda-outro');
+        const motivo = select.value === 'Outro' ? outro.value : select.value;
+
+        if (!motivo) { alert("Informe o motivo."); return; }
+
+        if (tempLeadToSave) {
+            tempLeadToSave.motivoPerda = motivo;
+            const idx = leads.findIndex(l => l.id == tempLeadToSave.id);
+            if (idx !== -1) leads[idx] = tempLeadToSave;
+            else leads.push(tempLeadToSave);
+            tempLeadToSave = null;
+        }
+        closeModal('modal-motivo-perda');
         closeModal('modal-lead');
         render();
     }
@@ -2613,6 +3002,9 @@ function vender(id) {
     document.getElementById('venda-item-id').value = id;
     document.getElementById('comprador-nome').value = '';
     document.getElementById('comprador-whats').value = '';
+    document.getElementById('comprador-cpf').value = '';
+    document.getElementById('comprador-rg').value = '';
+    document.getElementById('comprador-endereco').value = '';
     document.getElementById('venda-pagamento').value = 'Financiamento';
     
     document.getElementById('modal-venda').style.display = 'flex';
@@ -2622,6 +3014,9 @@ function confirmarVendaAvancada() {
     const id = parseInt(document.getElementById('venda-item-id').value);
     const nome = document.getElementById('comprador-nome').value.trim();
     const whats = document.getElementById('comprador-whats').value.trim();
+    const cpf = document.getElementById('comprador-cpf').value.trim();
+    const rg = document.getElementById('comprador-rg').value.trim();
+    const endereco = document.getElementById('comprador-endereco').value.trim();
     const pagamento = document.getElementById('venda-pagamento').value;
 
     if (!nome) {
@@ -2638,6 +3033,9 @@ function confirmarVendaAvancada() {
         db[idx].comprador = {
             nome: nome,
             whats: whats,
+            cpf: cpf,
+            rg: rg,
+            endereco: endereco,
             pagamento: pagamento
         };
 
